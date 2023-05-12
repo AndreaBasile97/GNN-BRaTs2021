@@ -125,7 +125,7 @@ def train(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
 
 
 # from GAT import GATDummy
-from training.GATSage import GATSage
+from models.GATSage import GATSage
 # from GCN import GCN
 # from GATPaper import GAT
 
