@@ -4,6 +4,7 @@ import networkx as nx
 # Graphs are filled with 20-dimensional feature vector for each node.
 def add_features_to_graph(features_file, graph_file):
     # Load the features dictionary
+    print(features_file)
     with open(features_file, 'rb') as f:
         features_dict = pickle.load(f)
         
@@ -17,8 +18,10 @@ def add_features_to_graph(features_file, graph_file):
 
     # Assign the feature vector to the corresponding node in the copy of the graph
     for node, features in features_dict.items():
-        if str(node) in new_graph:
-            new_graph.nodes[str(node)]['feature'] = str(features)
+        if str(int(node)) in new_graph:
+            new_graph.nodes[str(int(node))]['feature'] = str(features)
+        else:
+            raise Exception(f'{str(int(node))} not found in the graph {new_graph}')
 
     new_graph.nodes[str(0)]['feature'] = '[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]'
     
@@ -34,13 +37,12 @@ def assing_features_to_graphs(graphs_path, features_path, save_path):
             print(f'processing {graph}')
             id = graph.split("_")[2].split(".")[0]
             features_file_path = f"{features_path}/features_{id}.pkl"  # Use a new variable here
-            with open(features_file_path, 'rb') as f:
-                features_dict = pickle.load(f)
-            # create a new graph with new features and store them in 'save_path'
             graph_path = f"{graphs_path}/{graph}"
             new_graph = add_features_to_graph(features_file_path, graph_path)  # Use the new variable here
+            new_graph.remove_node('0')
             nx.write_graphml(new_graph, f"{save_path}/brain_graph_{id}.graphml")
         except:
+            print(f'features associated with {graph} not found. Are you sure that you have {features_path}/features_{id}.pkl in {features_path}')
             pass
 
 

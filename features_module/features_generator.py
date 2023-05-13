@@ -3,31 +3,21 @@ import pickle
 import nibabel as nib
 import os
 
-def compute_supervoxel_percentile(SLIC, *scans):
-    supervoxel_percentile = {}
-    
-    unique_labels = np.unique(SLIC)
-    unique_labels = unique_labels[unique_labels != 0]  # Exclude the zero label
+def extract_features(slic_data, scan_list):
+    percentiles = [10, 25, 50, 75, 90]
+    features = {}
 
-    # Create a mask that contains only the unique labels in SLIC
-    mask = np.isin(SLIC, unique_labels)
-
-    # Loop over each scan
-    for scan in scans:
-        # Use the mask to extract the intensities for each label from the scan
-        intensities = [scan[mask & (SLIC == label)] for label in unique_labels]
-
-        # Compute the percentile for each set of intensities
-        scan_percentiles = {int(label): [np.percentile(values, 10), np.percentile(values, 25), np.percentile(values, 50), np.percentile(values, 75), np.percentile(values, 90)] for label, values in zip(unique_labels, intensities)}
+    for cluster in np.unique(slic_data):
+        feature_vector = []
+        coordinate = np.where(slic_data == cluster)
         
-        # If the label is already in the dictionary, concatenate the percentiles. If not, add it to the dictionary.
-        for label, percentiles in scan_percentiles.items():
-            if label in supervoxel_percentile:
-                supervoxel_percentile[label].extend(percentiles)
-            else:
-                supervoxel_percentile[label] = percentiles
-
-    return supervoxel_percentile
+        for scan in scan_list:
+            supervoxel = scan[coordinate]
+            modality_features = [np.percentile(supervoxel, p) for p in percentiles]
+            feature_vector.extend(modality_features)
+            features[cluster] = feature_vector
+    
+    return features     
 
 
 def get_patient_ids(paths):
@@ -70,7 +60,7 @@ def generate_features(old_dataset, new_dataset, features_path):
                     except:
                         pass
 
-                features = compute_supervoxel_percentile(slic.get_fdata(), scans[0], scans[1], scans[2], scans[3])
+                features = extract_features(slic.get_fdata(), scans)
 
                 with open(f"{features_path}features_{id[0]}.pkl", "wb") as f:
                     pickle.dump(features, f)

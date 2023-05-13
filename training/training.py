@@ -17,16 +17,27 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, message="TypedStorage is deprecated")
 os.environ["DGLBACKEND"] = "pytorch"
 
-dgl_train_graphs, t_ids = load_dgl_graphs_from_bin('graphs_module/DGL_graphs/new_train_dgl_graphs_fix.bin', 'graphs_module/DGL_graphs/new_train_patient_ids_fix.pkl')
+dgl_train_graphs, t_ids = load_dgl_graphs_from_bin('graphs_module/DGL_graphs/FIXED_TRAIN_dgl_graphs_fix.bin', 'graphs_module/DGL_graphs/FIXED_TRAIN_patient_ids_fix.pkl')
 # dgl_validation_graphs, v_ids = load_dgl_graphs_from_bin('../graphs_module/DGL_graphs/val_dgl_graphs_fix.bin', '../graphs_module/DGL_graphs/val_patient_ids_fix.pkl')
 # dgl_test_graphs, test_ids = load_dgl_graphs_from_bin('../graphs_module/DGL_graphs/test_dgl_graphs_fix.bin', '../graphs_module/DGL_graphs/test_patient_ids_fix.pkl')
 
 from evaluations.compute_metrics import calculate_node_dices
 from torch.optim.lr_scheduler import ExponentialLR
+import numpy as np
 
 def train(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
 
-    optimizer = optim.AdamW(model.parameters(), lr=0.00005) 
+    lr0 = 0.001  # Initial learning rate
+    weight_decay = 0.0001  # Weight decay for AdamW
+    lambda_ = 0.98  # Decay factor for learning rate
+
+    # Define the optimizer
+    optimizer = optim.AdamW(model.parameters(), lr=lr0, weight_decay=weight_decay)
+
+    # Define the learning rate scheduler
+    scheduler = ExponentialLR(optimizer, gamma=lambda_)
+
+    # optimizer = optim.AdamW(model.parameters(), lr=0.0001) 
     # scheduler = ExponentialLR(optimizer, gamma=0.0001)
 
     print('Training started...')
@@ -53,7 +64,7 @@ def train(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
             # Compute prediction
             pred = logits.argmax(1)
 
-            # Compute loss with class weights -----CONTROLLARE
+            # Compute loss with class weights
             loss = F.cross_entropy(logits, labels, weight=loss_w)
 
             pred = pred + 1
@@ -73,7 +84,7 @@ def train(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
             optimizer.step()
     
         # Apply the learning rate scheduler
-        # scheduler.step()
+        scheduler.step()
 
         # Compute average loss and accuracy values across all graphs
         avg_loss = total_loss / len(dgl_train_graphs)
@@ -143,8 +154,6 @@ print(f'CrossEntropyLoss weights: {avg_weights}')
 # # modelGCN = GCN(20, 2048, 4)
 
 # trained_model = train(pruned_train_graphs[:1], pruned_train_graphs[:1], model, avg_weights)
-
-print(pruned_train_graphs[0])
 
 
 # Define GAT parameters

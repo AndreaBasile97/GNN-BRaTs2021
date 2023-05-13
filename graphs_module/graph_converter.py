@@ -118,9 +118,7 @@ def load_graphs(graph_files, set_type:str, save=False):
                 labels_generated = pickle.load(file)
 
             # Load graph of the current user
-            graph = nx.read_graphml(f'graphs/{graph_file}')
-
-            graph.remove_node('0')
+            graph = nx.read_graphml(f'new_graphs/{graph_file}')
         
             # Convert to DGL format
             dgl_graph = dgl.from_networkx(graph)
@@ -128,6 +126,8 @@ def load_graphs(graph_files, set_type:str, save=False):
 
             with open(f'../features_module/new_features/features_{id_patient}.pkl', 'rb') as f:
                 feature_pkl = pickle.load(f)
+                del feature_pkl[0]
+
             output_list = [value for value in feature_pkl.values()]
             is_corrupted = any(len(lst) == 0 for lst in output_list) # check if there are empty list
             tensor_pkl = torch.tensor(output_list) # tensor features
@@ -142,8 +142,8 @@ def load_graphs(graph_files, set_type:str, save=False):
             if not is_corrupted:
                 graphs.append(dgl_graph)
                 patient_ids.append(id_patient)  # Add the patient ID to the list
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
     if save:
         dgl.save_graphs(f'DGL_graphs/{set_type}_dgl_graphs_fix.bin', graphs)
@@ -157,7 +157,7 @@ import os
 
 def generate_DGL_graphs():
     graphs_list = [g for g in os.listdir('./new_graphs')]
-    load_graphs(graphs_list, set_type='new_train', save=True)
+    load_graphs(graphs_list, set_type='FIXED_TRAIN', save=True)
 
 
 def generate_tumor_segmentation_from_graph(segmented_image, labeled_graph):
