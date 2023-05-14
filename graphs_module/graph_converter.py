@@ -4,7 +4,10 @@ import nibabel as nib
 import pickle
 import dgl
 import numpy as np
+import os 
 
+
+# Load DGL graphs from bin
 def load_dgl_graphs_from_bin(file_path, ids_path):
     dgl_graph_list, _ = dgl.load_graphs(file_path)
     with open(f'{ids_path}', 'rb') as file:
@@ -12,6 +15,9 @@ def load_dgl_graphs_from_bin(file_path, ids_path):
     return dgl_graph_list, ids
 
 
+
+
+# Convert DGL to Networkx
 def dgl_to_simple_graph(dgl_graph):
     nx_multigraph = dgl_graph.to_networkx().to_undirected()
     nx_graph = nx.Graph()
@@ -34,6 +40,9 @@ def dgl_to_simple_graph(dgl_graph):
     return nx_graph
 
 
+
+
+# Utilities for assign labels to a NX Graph
 def get_supervoxel_values(slic_image, coordinates_dict):
 
     supervoxel_values = {}
@@ -52,7 +61,6 @@ def get_supervoxel_values(slic_image, coordinates_dict):
 
     return supervoxel_values
 
-
 def get_coordinates(tumor_seg, values=[1, 2, 4]):
 
     coordinates = {}
@@ -68,7 +76,6 @@ def get_coordinates(tumor_seg, values=[1, 2, 4]):
         coordinates[value] = coords
 
     return coordinates
-
 
 def assign_labels_to_graph(tumor_seg, slic_image, graph):
 
@@ -88,12 +95,17 @@ def assign_labels_to_graph(tumor_seg, slic_image, graph):
     return graph    
 
 
+
+
+# Transform labels to a tensor for a given patient
 def tensor_labels(segmented_image, labels_generated, empty_RAG, id_patient, save=False):
     R = assign_labels_to_graph(labels_generated, segmented_image, empty_RAG)
     tl = torch.tensor(list(nx.get_node_attributes(R, 'label').values()))
     if save==True:
        torch.save(tl, f'..labels_module/tensor_labels/tensor_label_{id_patient}')
     return tl
+
+
 
 
 # create a dataset of DGLGraphs using the networkx graphs
@@ -130,7 +142,8 @@ def load_graphs(graph_files, set_type:str, save=False):
 
             output_list = [value for value in feature_pkl.values()]
             is_corrupted = any(len(lst) == 0 for lst in output_list) # check if there are empty list
-            tensor_pkl = torch.tensor(output_list) # tensor features
+            tensor_pkl = torch.tensor(output_list, dtype=torch.float32) # tensor features
+
             dgl_graph.ndata['feat'] = tensor_pkl
 
             # Convert labels into torch tensors
@@ -153,41 +166,52 @@ def load_graphs(graph_files, set_type:str, save=False):
             
     return graphs, patient_ids
 
-import os 
 
+
+# Transform a feature matrix of 20-dimensional vector into a 5-dimensional vector through the mean
+
+# def transform_feature_vector(feature_vector):
+#     # Define your percentile indices
+#     percentile_indices = {
+#         10: [0, 5, 10, 15],
+#         25: [1, 6, 11, 16],
+#         50: [2, 7, 12, 17],
+#         75: [3, 8, 13, 18],
+#         90: [4, 9, 14, 19]
+#     }
+
+#     # Create an empty array of 5 elements
+#     new_feature_vector = np.empty(5)
+
+#     # Compute the mean for each percentile and store it in the new feature vector
+#     for i, indices in enumerate(percentile_indices.values()):
+#         new_feature_vector[i] = np.mean([feature_vector[idx] for idx in indices])
+
+#     return new_feature_vector
+
+# def transform_feature_matrix(feature_matrix):
+#     # Convert PyTorch tensor to numpy array
+#     feature_matrix_np = feature_matrix.numpy()
+
+#     # Create an empty matrix with n rows and 5 columns
+#     new_feature_matrix = np.empty((feature_matrix_np.shape[0], 5))
+
+#     # Transform each feature vector
+#     for i in range(feature_matrix_np.shape[0]):
+#         new_feature_matrix[i, :] = transform_feature_vector(feature_matrix_np[i, :])
+
+#     # Convert the resulting numpy array back to PyTorch tensor
+#     new_feature_matrix_torch = torch.from_numpy(new_feature_matrix)
+    
+#     return new_feature_matrix_torch
+
+
+
+# Generation of DGL bin using 'load_graphs'
 def generate_DGL_graphs():
     graphs_list = [g for g in os.listdir('./new_graphs')]
     load_graphs(graphs_list, set_type='FIXED_TRAIN', save=True)
 
 
-def generate_tumor_segmentation_from_graph(segmented_image, labeled_graph):
-    # Create a dictionary to map node IDs to their labels
-    node_label_map = {int(n): labeled_graph.nodes[n]['label'] for n in labeled_graph.nodes()}
-    
-    # Create a mask for labels to keep (1, 2, and 4)
-    labels_to_keep = np.array([1, 2, 4])
-    
-    # Replace node IDs in segmented_image with their corresponding labels
-    label_image = np.vectorize(node_label_map.get)(segmented_image)
-    
-    # Use np.isin to create a boolean mask for the labels we want to keep
-    mask = np.isin(label_image, labels_to_keep)
-    
-    # Use np.where to create the segmented tumor image
-    segmented_tumor = np.where(mask, label_image, 0)
-    
-    return segmented_tumor
-
 
 generate_DGL_graphs()
-# dgl_train_graphs, t_ids = load_dgl_graphs_from_bin('../graphs_module/DGL_graphs/train_dgl_graphs_fix.bin', '../graphs_module/DGL_graphs/train_patient_ids_fix.pkl')
-
-# print(t_ids[0])
-# print(dgl_train_graphs[0].ndata['feat'])
-
-# graph = nx.read_graphml(f'graphs/brain_graph_{t_ids[0]}.graphml')
-# with open(f'../features_module/new_features/features_{t_ids[0]}.pkl', 'rb') as f:
-#     feature_pkl = pickle.load(f)
-# output_list = [value for value in feature_pkl.values()]
-# tensor_pkl = torch.tensor(output_list)
-# print(tensor_pkl)

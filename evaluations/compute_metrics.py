@@ -35,3 +35,25 @@ def calculate_dice_from_logical_array(binary_predictions, binary_ground_truth):
     if (tp + fp + fn) == 0:
         return 1
     return (2 * tp) / (2 * tp + fp + fn)
+
+
+def compute_ASA(supervoxels, ground_truth):
+    regions = [1, 2, 4]
+    ASA_scores = {}
+
+    for region in regions:
+        # Get the supervoxels and ground truth for the current region
+        region_supervoxels = (supervoxels == region)
+        region_ground_truth = (ground_truth == region)
+
+        # Compute the intersection of the supervoxels and ground truth
+        intersection = np.logical_and(region_supervoxels, region_ground_truth)
+
+        # Compute ASA for the current region
+        numerator = np.sum(np.max(intersection, axis=(1,2,3)))
+        denominator = np.sum(region_ground_truth)
+        ASA = numerator / denominator
+
+        ASA_scores[region] = ASA
+
+    return ASA_scores

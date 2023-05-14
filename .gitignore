@@ -2,3 +2,12 @@
 metrics.csv
 training.rar
 datasets
+evaluations/__pycache__
+training/FEATURES.pkl
+training/GRAFO_LABELLATO.graphml
+training/LABELS.pkl
+training/SLIC.nii.gz
+training/DGL_graphs/TRAIN_dgl_graphs_fix2.bin
+training/DGL_graphs/TRAIN_patient_ids_fix2.pkl
+.gitignore
+evaluations/__pycache__/compute_metrics.cpython-310.pyc
