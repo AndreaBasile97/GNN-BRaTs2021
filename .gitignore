@@ -12,3 +12,4 @@ training/DGL_graphs/TRAIN_patient_ids_fix2.pkl
 .gitignore
 preprocessed_dataset_new
 evaluations/__pycache__/compute_metrics.cpython-310.pyc
+.DS_Store
