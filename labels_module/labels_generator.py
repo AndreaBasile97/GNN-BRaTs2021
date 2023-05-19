@@ -69,14 +69,14 @@ def generate_all_labels(brain_images_path):
                 if scan_modality in ['seg']:
                     seg = nib.load(f"{brain_images_path}{subdir}/{filename}").get_fdata()
             seg = np.round(seg).astype(int)
-            
+
             labels_generated = generate_labels(scan, seg)
 
             # Verify that the generated labels are not all 0.
             if len(np.unique(labels_generated)) <= 1:
                 print(f'Error, patient {id[0]} has all labels equal to 0 or does not have any.')
 
-            print(f"lables generated for {id[0]}")
+            print(f"labels generated for {id[0]}")
             with open(f"{root}labels/labels_{id[0]}.pkl", "wb") as f:
                 pickle.dump(labels_generated, f)
         except Exception as e:
