@@ -3,8 +3,6 @@ import pickle
 import nibabel as nib
 import os
 
-d
-
 def extract_features(slic_data, scan_list):
     percentiles = [10, 25, 50, 75, 90]
     features = {}
