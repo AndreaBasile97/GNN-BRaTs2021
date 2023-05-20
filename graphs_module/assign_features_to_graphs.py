@@ -1,5 +1,6 @@
 import pickle
 import networkx as nx
+import os
 
 # Graphs are filled with 20-dimensional feature vector for each node.
 def add_features_to_graph(features_file, graph_file):
@@ -27,7 +28,11 @@ def add_features_to_graph(features_file, graph_file):
     
     return new_graph
 
-import os
+#############################
+graphs_path = '/ext/tesi_BraTS2021/graphs'
+features_path = '/ext/tesi_BraTS2021/features'
+save_path = '/ext/tesi_BraTS2021/graphs'
+
 
 def assing_features_to_graphs(graphs_path, features_path, save_path):
     # take all the graphs in graphs_path
@@ -37,8 +42,8 @@ def assing_features_to_graphs(graphs_path, features_path, save_path):
             print(f'processing {graph}')
             id = graph.split("_")[2].split(".")[0]
             features_file_path = f"{features_path}/features_{id}.pkl"  # Use a new variable here
-            graph_path = f"{graphs_path}/{graph}"
-            new_graph = add_features_to_graph(features_file_path, graph_path)  # Use the new variable here
+            graphs_file_path = f"{graphs_path}/{graph}"
+            new_graph = add_features_to_graph(features_file_path, graphs_file_path)  # Use the new variable here
             new_graph.remove_node('0')
             nx.write_graphml(new_graph, f"{save_path}/brain_graph_{id}.graphml")
         except:
@@ -46,4 +51,4 @@ def assing_features_to_graphs(graphs_path, features_path, save_path):
             pass
 
 
-assing_features_to_graphs('./graphs', '../features_module/new_features', './new_graphs')
+assing_features_to_graphs(graphs_path, features_path, save_path)
