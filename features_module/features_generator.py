@@ -40,7 +40,7 @@ def generate_features(new_dataset, features_path):
         list_feature_completed.append(id_f)
 
     i = 1
-    subdirectories = [d for d in os.listdir(new_dataset)[:125] if os.path.isdir(os.path.join(new_dataset, d))]
+    subdirectories = [d for d in os.listdir(new_dataset) if os.path.isdir(os.path.join(new_dataset, d))]
     for subdir in subdirectories:
         if not subdir == 'features':
             subdir_path = os.path.join(new_dataset, subdir)
