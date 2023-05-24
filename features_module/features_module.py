@@ -5,9 +5,9 @@ import os
 from training.utilities import get_patient_ids
 
 class FeaturesModule:
-    def __init__(self, dataset_path, feature_path):
+    def __init__(self, dataset_path, save_path):
         self.dataset_path = dataset_path
-        self.feature_path = feature_path
+        self.save_path = save_path
 
 
     def extract_features(self, slic_data, scan_list):
@@ -26,10 +26,11 @@ class FeaturesModule:
         
         return features     
 
+
     # Generating features for the entire dataset
     def generate_features(self):
         list_feature_completed = []
-        features_completed = [d for d in os.listdir(self.feature_path)]
+        features_completed = [d for d in os.listdir(self.save_path)]
         for f in features_completed:
             id_f = f.split('_')[1].split('.')[0]
             list_feature_completed.append(id_f)
@@ -58,7 +59,7 @@ class FeaturesModule:
 
                         features = self.extract_features(slic.get_fdata(), scans)
 
-                        with open(f"{self.feature_path}/features_{id[0]}.pkl", "wb") as f:
+                        with open(f"{self.save_path}/features_{id[0]}.pkl", "wb") as f:
                             pickle.dump(features, f)
                 except Exception as e:
                     print(e)
