@@ -5,15 +5,14 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage import graph
 import networkx as nx
-from training.utilities import get_patient_ids, assign_labels_to_graph
+from training.utilities import get_patient_ids, add_labels_to_single_graph
 
 
 class GraphsModule:
-    def __init__(self, dataset_path, graphs_path, features_path, save_path, labels_path):
+    def __init__(self, dataset_path, graphs_path, features_path, labels_path):
         self.dataset_path = dataset_path
         self.graphs_path = graphs_path
         self.features_path = features_path
-        self.save_path = save_path
         self.labels_path = labels_path
 
 
@@ -25,7 +24,7 @@ class GraphsModule:
         return G
     
 
-    def add_features_to_graph(self, features_file, graph_file):
+    def add_features_to_single_graph(self, features_file, graph_file):
         # Load the features dictionary
         print(features_file)
         with open(features_file, 'rb') as f:
@@ -71,7 +70,7 @@ class GraphsModule:
 
 
     # Assigning features to all graphs
-    def assign_features_to_graphs(self):
+    def assign_features_to_all_graphs(self):
         # take all the graphs in graphs_path
         graphs = [g for g in os.listdir(self.graphs_path)]
         for graph in graphs:
@@ -80,16 +79,16 @@ class GraphsModule:
                 id = graph.split("_")[2].split(".")[0]
                 features_file_path = f"{self.features_path}/features_{id}.pkl"
                 graphs_file_path = f"{self.graphs_path}/{graph}"
-                new_graph = self.add_features_to_graph(features_file_path, graphs_file_path)
+                new_graph = self.add_features_to_single_graph(features_file_path, graphs_file_path)
                 new_graph.remove_node('0')
-                nx.write_graphml(new_graph, f"{self.save_path}/brain_graph_{id}.graphml")
+                nx.write_graphml(new_graph, f"{self.graphs_path}/brain_graph_{id}.graphml")
             except:
                 print(f'Features associated with {graph} not found. Are you sure that you have {self.features_path}/features_{id}.pkl in {self.features_path}')
                 pass
 
 
     # Assigning labels to all graphs
-    def add_labels_to_graphs(self):
+    def assign_labels_to_all_graphs(self):
         subdirectories = [d for d in os.listdir(self.dataset_path) if os.path.isdir(os.path.join(self.dataset_path, d))]
         for subdir in subdirectories:
             subdir_path = os.path.join(self.dataset_path, subdir)
@@ -110,7 +109,7 @@ class GraphsModule:
             graph = nx.read_graphml(f'{self.graphs_path}/brain_graph_{id[0]}.graphml')
 
             try:
-                new_graph = assign_labels_to_graph(label, slic, graph)
+                new_graph = add_labels_to_single_graph(label, slic, graph)
                 nx.write_graphml(new_graph, f"{self.graphs_path}/brain_graph_{id[0]}.graphml")
                 print(f'Labels successfully associated with graph {id[0]}')
             except Exception as e:

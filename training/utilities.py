@@ -56,7 +56,7 @@ def get_supervoxel_values(slic_image, coordinates_dict):
     return supervoxel_values
 
 
-def assign_labels_to_graph(tumor_seg, slic_image, graph):
+def add_labels_to_single_graph(tumor_seg, slic_image, graph):
 
     coords = get_coordinates(tumor_seg)
     labels_supervoxel_dict = get_supervoxel_values(slic_image, coords)
@@ -94,7 +94,7 @@ def generate_tumor_segmentation_from_graph(segmented_image, graph):
     
 
 def tensor_labels(segmented_image, labels_generated, empty_RAG, id_patient, save=False):
-    R = assign_labels_to_graph(labels_generated, segmented_image, empty_RAG)
+    R = add_labels_to_single_graph(labels_generated, segmented_image, empty_RAG)
     tl = torch.tensor(list(nx.get_node_attributes(R, 'label').values()))
     if save==True:
        torch.save(tl, f'/content/drive/MyDrive/Tesi Progetto/tensor_labels/tensor_label_{id_patient}')
