@@ -5,9 +5,9 @@ import numpy as np
 from training.utilities import get_patient_ids
 
 class LabelsModule:
-    def __init__(self, dataset_path, labels_path):
+    def __init__(self, dataset_path, save_path):
         self.dataset_path = dataset_path
-        self.labels_path = labels_path
+        self.save_path = save_path
 
 
     def generate_labels(self, segmented_data, ground_truth_data):
@@ -69,7 +69,7 @@ class LabelsModule:
                     print(f'Error, patient {id[0]} has all labels equal to 0 or does not have any.')
 
                 print(f"labels generated for {id[0]}")
-                with open(f"{self.labels_path}/labels_{id[0]}.pkl", "wb") as f:
+                with open(f"{self.save_path}/labels_{id[0]}.pkl", "wb") as f:
                     pickle.dump(labels_generated, f)
             except Exception as e:
                 print(e)
