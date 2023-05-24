@@ -31,7 +31,7 @@ def get_patient_ids(paths):
         return ids, False
 
 
-def generate_features(old_dataset, new_dataset, features_path):
+def generate_features(new_dataset, features_path):
 
     list_feature_completed = []
     features_completed = [d for d in os.listdir(features_path)]
@@ -40,30 +40,33 @@ def generate_features(old_dataset, new_dataset, features_path):
         list_feature_completed.append(id_f)
 
     i = 1
-    subdirectories = [d for d in os.listdir(old_dataset) if os.path.isdir(os.path.join(old_dataset, d))]
+    subdirectories = [d for d in os.listdir(new_dataset) if os.path.isdir(os.path.join(new_dataset, d))]
     for subdir in subdirectories:
         if not subdir == 'features':
-            subdir_path = os.path.join(old_dataset, subdir)
+            subdir_path = os.path.join(new_dataset, subdir)
             scans = []
-            id, flag = get_patient_ids([f"{old_dataset}{subdir}"])
-            i = i + 1
-            if id[0] not in list_feature_completed:
-                print(f"Processing {id[0]}: slic taken from {old_dataset} | flair, t1, t2, t1ce from {new_dataset}")
-                for filename in os.listdir(subdir_path):
-                    try:
-                        substring = filename.split("_")[2]
-                        modality = substring.split(".")[0]
-                        if modality in ['SLIC']:
-                            slic = nib.load(f"{old_dataset}{subdir}/{filename}")
-                        elif modality in ['flair','t1','t2','t1ce']:
-                            scans.append(nib.load(f"{new_dataset}{subdir}/{filename}").get_fdata())
-                    except:
-                        pass
+            try:
+                id, flag = get_patient_ids([f"{new_dataset}{subdir}"])
+                i = i + 1
+                if id[0] not in list_feature_completed:
+                    print(f"Processing {id[0]}: slic taken from {new_dataset} | flair, t1, t2, t1ce from {new_dataset}")
+                    for filename in os.listdir(subdir_path):
+                        try:
+                            substring = filename.split("_")[2]
+                            modality = substring.split(".")[0]
+                            if modality in ['SLIC']:
+                                slic = nib.load(f"{new_dataset}{subdir}/{filename}")
+                            elif modality in ['flair','t1','t2','t1ce']:
+                                scans.append(nib.load(f"{new_dataset}{subdir}/{filename}").get_fdata())
+                        except:
+                            pass
 
-                features = extract_features(slic.get_fdata(), scans)
+                    features = extract_features(slic.get_fdata(), scans)
 
-                with open(f"{features_path}features_{id[0]}.pkl", "wb") as f:
-                    pickle.dump(features, f)
+                    with open(f"{features_path}features_{id[0]}.pkl", "wb") as f:
+                        pickle.dump(features, f)
+            except Exception as e:
+                print(e)
 
 
-generate_features('../datasets/old_dataset/', '../datasets/preprocessed_dataset/', './new_features/')
+generate_features('/ext/PREPROCESSED_DATASET_NEW/', '/ext/tesi_BraTS2021/features/')
