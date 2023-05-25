@@ -12,7 +12,7 @@ from training.utilities import load_dgl_graphs_from_bin, prune_graphs, compute_a
 import torch.optim as optim
 import os
 import warnings
-
+import pandas as pd
 # Ignore UserWarning related to TypedStorage deprecation
 warnings.filterwarnings("ignore", category=UserWarning, message="TypedStorage is deprecated")
 os.environ["DGLBACKEND"] = "pytorch"
@@ -28,9 +28,13 @@ import numpy as np
 def train(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
 
     # Define the optimizer
-    optimizer = optim.AdamW(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0005, weight_decay=0.0001)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
+
 
     print('Training started...')
+
+    metrics = []
 
     for e in range(500):
         model.train()
@@ -76,79 +80,81 @@ def train(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
             loss.backward()
             optimizer.step()
 
+        scheduler.step()
+
         # Compute average loss and accuracy values across all graphs
         avg_loss = total_loss / len(dgl_train_graphs)
         avg_train_precision = total_precision / len(dgl_train_graphs)
         avg_train_f1 = total_train_f1 / len(dgl_train_graphs)
 
-        # # Validation loop
-        # total_val_recall = 0
-        # total_val_precision = 0
-        # total_val_f1 = 0
-        # total_val_loss = 0
+        # Validation loop
+        total_val_recall = 0
+        total_val_precision = 0
+        total_val_f1 = 0
+        total_val_loss = 0
 
-        # model.eval()
-        # with torch.no_grad():
-        #     for g in dgl_validation_graphs:
-        #         # Get the features, labels, and masks for the current graph
-        #         features = g.ndata["feat"].float()
+        model.eval()
+        with torch.no_grad():
+            for g in dgl_validation_graphs:
+                # Get the features, labels, and masks for the current graph
+                features = g.ndata["feat"].float()
 
-        #         val_labels = g.ndata["label"]
-        #         val_labels = val_labels -1
+                val_labels = g.ndata["label"]
+                val_labels = val_labels -1
 
-        #         # Forward pass
-        #         logits = model(g, features)
+                # Forward pass
+                logits = model(g, features)
 
-        #         # Compute prediction
-        #         val_pred = logits.argmax(1)
+                # Compute prediction
+                val_pred = logits.argmax(1)
 
-        #         # Compute loss with class weights
-        #         val_loss = F.cross_entropy(logits, val_labels)  
+                # Compute loss with class weights
+                val_loss = F.cross_entropy(logits, val_labels)  
 
-        #         val_pred = val_pred + 1
-        #         val_labels = val_labels + 1
-        #         val_recall, val_precision, val_f1_score = compute_metrics(val_pred, val_labels)
+                val_pred = val_pred + 1
+                val_labels = val_labels + 1
+                val_recall, val_precision, val_f1_score = compute_metrics(val_pred, val_labels)
 
-        #         # Accumulate metrics values for this validation graph
-        #         total_val_loss += val_loss.item()
-        #         total_val_recall += val_recall.item()
-        #         total_val_precision += val_precision.item()
-        #         total_val_f1 += val_f1_score.item()
+                # Accumulate metrics values for this validation graph
+                total_val_loss += val_loss.item()
+                total_val_recall += val_recall.item()
+                total_val_precision += val_precision.item()
+                total_val_f1 += val_f1_score.item()
 
-        # avg_val_loss = total_val_loss / len(dgl_train_graphs)
-        # avg_val_precision = total_val_precision / len(dgl_validation_graphs)
-        # avg_val_f1 = total_val_f1 / len(dgl_validation_graphs)
+        avg_val_loss = total_val_loss / len(dgl_train_graphs)
+        avg_val_precision = total_val_precision / len(dgl_validation_graphs)
+        avg_val_f1 = total_val_f1 / len(dgl_validation_graphs)
+
+
+        metrics.append({
+                    'epoch': e,
+                    'loss': avg_loss,
+                    'precision_train_WT': avg_train_precision,
+                    'f1_score_train_WT': avg_train_f1,
+                    'val_loss': avg_val_loss,
+                    'precision_val_WT': avg_val_precision,
+                    'f1_score_val_WT': avg_val_f1
+                })
+
 
         # if e % 5 == 0:
-        print(f"EPOCH {e} | loss: {avg_loss:.3f} | precision train WT: {avg_train_precision:.3f} | f1-score train WT: {avg_train_f1:.3f}|")   
-            #   |val_loss:{avg_val_loss:.3f} | precision val WT: {avg_val_precision:.3f} | f1-score WT: {avg_val_f1:.3f} ")
+        print(f"EPOCH {e} | loss: {avg_loss:.3f} | precision train WT: {avg_train_precision:.3f} | f1-score train WT: {avg_train_f1:.3f}||val_loss:{avg_val_loss:.3f} | precision val WT: {avg_val_precision:.3f} | f1-score WT: {avg_val_f1:.3f} ")
+
+    # Save metrics to a CSV file
+    df_metrics = pd.DataFrame(metrics)
+    df_metrics.to_csv('training_metrics.csv', index=False)
 
 
 
-# from GAT import GATDummy
 from models.GATSage import GATSage
-# from GCN import GCN
-# from GATPaper import GAT
-
-
 
 avg_weights = compute_average_weights(dgl_train_graphs)
-pruned_train_graphs = prune_graphs(dgl_train_graphs)
 
 print(f'CrossEntropyLoss weights: {avg_weights}')
 
-
-# # FEATURES - HIDDEN LAYERS DIM - HEADS - CLASSES
-# model = GATDummy(20, 256, 4, 4)
-
-# # modelGCN = GCN(20, 2048, 4)
-
-# trained_model = train(pruned_train_graphs[:1], pruned_train_graphs[:1], model, avg_weights)
-
-
 # Define GAT parameters
 in_feats = 20
-layer_sizes = [1024, 256, 256, 256, 1024]
+layer_sizes = [256, 256, 256, 256, 1024]
 n_classes = 4
 heads = [2, 2, 2, 2, 2]
 residuals = [True, True, True, True, True]
