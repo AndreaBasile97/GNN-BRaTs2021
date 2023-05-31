@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from skimage import graph
 import networkx as nx
 from training.utilities import get_patient_ids, assign_labels_to_graph
-
+import ast
 
 class GraphsModule:
     def __init__(self, dataset_path, graphs_path, features_path, save_path, labels_path):
@@ -115,3 +115,33 @@ class GraphsModule:
                 print(f'Labels successfully associated with graph {id[0]}')
             except Exception as e:
                 print(f'Error, labels have not been added to the graph of patient {id[0]}: {e}')
+
+
+    def plot_percentiles_mean(self, labeled_graph):
+        percentile_indices = {
+            10: [0, 5, 10, 15],
+            25: [1, 6, 11, 16],
+            50: [2, 7, 12, 17],
+            75: [3, 8, 13, 18],
+            90: [4, 9, 14, 19]
+        }
+
+        # Prepare data for each label
+        for label in [1, 2, 3, 4]:
+            # Filter nodes with the current label
+            nodes = [node for node, data in labeled_graph.nodes(data=True) if data['label'] == label]
+            
+            # Calculate the mean of the desired percentiles for the filtered nodes
+            means = []
+            for percentile, indices in percentile_indices.items():
+                percentile_values = [np.mean([ast.literal_eval(labeled_graph.nodes[node]['feature'])[i] for i in indices]) for node in nodes]
+                mean_value = np.mean(percentile_values)
+                means.append(mean_value)
+            
+            # Plot the results
+            plt.plot([10, 25, 50, 75, 90], means, label=f'Label {label}')
+
+        plt.xlabel('Percentile')
+        plt.ylabel('Mean Value')
+        plt.legend()
+        plt.show()

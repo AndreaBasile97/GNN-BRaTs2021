@@ -1,9 +1,9 @@
 import numpy as np
 
 HEALTHY = 3
-EDEMA = 4
+EDEMA = 2
 NET = 1
-ET = 2
+ET = 4
 
 # Calculate nodewise Dice score for WT, CT, and ET for a single brain.
 # Expects two 1D vectors of integers.

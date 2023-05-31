@@ -7,7 +7,7 @@ import pickle
 import random
 from sklearn.model_selection import train_test_split
 from training.utilities import get_coordinates, get_supervoxel_values, assign_labels_to_graph
-
+import matplotlib.pyplot as plt
 
 class DglGenerator:
     def __init__(self, dataset_path, graph_path, labels_path, dgl_path, tensor_path):
@@ -110,3 +110,42 @@ class DglGenerator:
                 pickle.dump(patient_ids, file)
 
         return graphs, patient_ids
+
+
+    def DGLGraph_plotter(nx_graph):
+        # Color Map
+        color_map = {3: (0.5, 0.5, 0.5, 0.2), 1: 'blue', 2: 'yellow', 4: 'red'}
+
+        # Assign color to nodes taking their label
+        node_colors = [color_map[nx_graph.nodes[node]['label']] for node in nx_graph.nodes]
+
+        # Prepare the list of colors based on the edge labels
+        edge_colors = []
+        for u, v in nx_graph.edges():
+            if nx_graph.nodes[u]['label'] in {1, 2, 4} and nx_graph.nodes[v]['label'] in {1, 2, 4}:
+                edge_colors.append('red')
+            else:
+                edge_colors.append((0, 0, 0, 0.2))  # Black color with 0.2 transparency
+
+        plt.figure(figsize=(15, 11))
+        # Draw the graph
+        pos = nx.spring_layout(nx_graph)
+        nx.draw(nx_graph, pos, node_color=node_colors, edge_color=edge_colors)
+
+        # Create a dictionary with node keys for nodes with labels 1, 2, and 4
+        label_dict = {node: node for node in nx_graph.nodes if nx_graph.nodes[node]['label'] in {1, 2, 4}}
+
+        # Draw node labels
+        nx.draw_networkx_labels(nx_graph, pos, labels=label_dict, font_size = 8)
+
+        # Create the legend
+        legend_elements = [
+            plt.Line2D([0], [0], marker='o', color='w', label='Enhanced', markerfacecolor='red', markersize=8),
+            plt.Line2D([0], [0], marker='o', color='w', label='Edema', markerfacecolor='yellow', markersize=8),
+            plt.Line2D([0], [0], marker='o', color='w', label='Necrosis', markerfacecolor='blue', markersize=8),
+            plt.Line2D([0], [0], marker='o', color='w', label='Other', markerfacecolor=color_map[3], markersize=8)
+        ]
+
+        # Display the legend
+        plt.legend(handles=legend_elements, loc='best')
+        plt.show()
