@@ -359,3 +359,29 @@ def predict(graph, feature, model):
     
     return pred
 
+def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, \
+                  residuals, val_dropout, layer_sizes, in_feats, n_classes):
+    # Open the file in write mode ('w')
+    with open(f'training_{timestamp}_settings.txt', 'w') as f:
+        f.write('-- TYPE MODEL --\n')
+        f.write(f'model = {model}\n')
+
+        f.write('\n-- HYPERPARAMS --\n')
+        f.write(f'patience = {patience}\n')
+        f.write(f'lr = {lr}\n')
+        f.write(f'weight_decay = {weight_decay}\n')
+        f.write(f'gamma = {gamma}\n')
+        if args_model == 'GAT':
+            f.write(f'heads = {heads}\n')
+            f.write(f'residuals = {residuals}\n')
+        elif args_model == 'GraphSage':
+            f.write(f'dropout = {val_dropout}\n')
+        f.write(f'layer_sizes = {layer_sizes}\n')
+
+        # Write each variable on its own line
+        f.write('\n-- PARAMETERS --\n')
+        f.write(f'in_feats = {in_feats}\n')
+        f.write(f'n_classes = {n_classes}\n')
+        
+        f.write('\n-- DATE --\n')
+        f.write(f'timestamp = {timestamp}\n')

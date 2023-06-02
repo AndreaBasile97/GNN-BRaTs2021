@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from training.utilities import compute_average_weights, generate_dgl_dataset, create_batches, batch_dataset, load_networkx_graph
+from training.utilities import compute_average_weights, save_settings
 import torch.optim as optim
 import os
 import warnings
@@ -74,13 +74,13 @@ test_batches = list(grouper(test_data, 6))
 
 
 import dgl
-def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w, patience, lr, weight_decay, gamma):
+def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w, patience, val_lr, val_weight_decay, val_gamma):
     # Define the optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr, weight_decay)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma)
+    optimizer = torch.optim.AdamW(model.parameters(), lr = val_lr, weight_decay = val_weight_decay)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = val_gamma)
 
     timestamp = datetime.datetime.now()
-    print('Training started at: ')
+    print(f'Training started at: {timestamp}')
 
     metrics = []
     best_val_loss = float('inf')
@@ -232,31 +232,8 @@ if args.model == 'GraphSage':
 elif args.model == 'GAT':
     model = GAT(in_feats, layer_sizes, n_classes, heads, residuals)
 
-
-# Open the file in write mode ('w')
-with open(f'training_{timestamp}_settings.txt', 'w') as f:
-    f.write('-- TYPE MODEL --\n')
-    f.write(f'model = {model}\n')
-
-    f.write('\n-- HYPERPARAMS --\n')
-    f.write(f'patience = {patience}\n')
-    f.write(f'lr = {lr}\n')
-    f.write(f'weight_decay = {weight_decay}\n')
-    f.write(f'gamma = {gamma}\n')
-    if args.model == 'GAT':
-        f.write(f'heads = {heads}\n')
-        f.write(f'residuals = {residuals}\n')
-    elif args.model == 'GraphSage':
-        f.write(f'dropout = {val_dropout}')
-    f.write(f'layer_sizes = {layer_sizes}\n')
-    
-    # Write each variable on its own line
-    f.write('\n-- PARAMETERS --\n')
-    f.write(f'in_feats = {in_feats}\n')
-    f.write(f'n_classes = {n_classes}\n')
-    
-    f.write('\n-- DATE --\n')
-    f.write(f'timestamp = {timestamp}\n')
+save_settings(timestamp, model, patience, lr, weight_decay, gamma, args.model, heads, \
+                  residuals, val_dropout, layer_sizes, in_feats, n_classes)
 
 
 trained_model = train_batch(train_batches, val_batches, model, avg_weights, patience, lr, weight_decay, gamma)
