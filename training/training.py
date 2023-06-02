@@ -188,7 +188,8 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
 
         # Save metrics to a CSV file
         df_metrics = pd.DataFrame(metrics)
-        df_metrics.to_csv('training_metrics.csv', index=False)
+        string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
+        df_metrics.to_csv(f'training_metrics_{string_timestamp}.csv', index=False)
 
     torch.save(model.state_dict(), f'model_epoch_{e}.pth')
 
