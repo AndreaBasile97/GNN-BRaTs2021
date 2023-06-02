@@ -29,7 +29,7 @@ dataset_pickle_path = os.getenv('DATASET_PICKLE_PATH')
 
 
 ####### LOAD THE DATASET  AND SPLIT TRAIN - TEST - VAL ########
-with open('dataset_pickle_path', 'rb') as f:
+with open(dataset_pickle_path, 'rb') as f:
     dataset = pickle.load(f)
 random.seed(42)  # Set the random seed to ensure reproducibility
 
