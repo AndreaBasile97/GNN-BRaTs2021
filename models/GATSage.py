@@ -35,7 +35,7 @@ class GraphSage(nn.Module):
         return h
 
 
-class GATSage(nn.Module):
+class GAT(nn.Module):
     def __init__(self,in_feats,layer_sizes,n_classes,heads,residuals,
                 activation=F.elu,feat_drop=0,attn_drop=0,negative_slope=0.2):
         super().__init__()
