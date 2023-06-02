@@ -4,11 +4,11 @@ from medpy.metric.binary import hd95
 from training.utilities import load_networkx_graph, generate_tumor_segmentation_from_graph
 
 HEALTHY = 3
-EDEMA = 4
+EDEMA = 2
 NET = 1
-ET = 2
+ET = 4
 
-dataset_path = 'training/DGL_graphs/train'
+dataset_path = '/ext/train'
 
 # Calculate nodewise Dice score for WT, CT, and ET for a single brain.
 # Expects two 1D vectors of integers.
@@ -83,6 +83,12 @@ def voxel_wise_batch_score(predicted_labels, ids_list):
     predicted_tumor_segmentation_list = []
     start_nodes_counter = 0
     end_nodes_counter = 0
+    # wt_dice_array = np.array([])
+    # ct_dice_array = np.array([])
+    # at_dice_array = np.array([])
+    # wt_hd_array = np.array([])
+    # ct_hd_array = np.array([])
+    # at_hd_array = np.array([])
 
     matrix = np.empty((0,6), int)
 
@@ -108,6 +114,13 @@ def voxel_wise_batch_score(predicted_labels, ids_list):
         matrix = np.vstack([matrix, row_scores])
 
     mean_scores = np.mean(matrix, axis=0)
+    
+        # np.append(wt_dice_array, wt_dice)
+        # np.append(ct_dice_array, ct_dice)
+        # np.append(at_dice_array, at_dice)
+        # np.append(wt_hd_array, wt_hd)
+        # np.append(ct_hd_array, ct_hd)
+        # np.append(at_hd_array, at_hd)
 
     return mean_scores
 

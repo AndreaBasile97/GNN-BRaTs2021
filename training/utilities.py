@@ -8,6 +8,91 @@ import dgl
 import dgl.data
 import plotly.graph_objs as go
 import sklearn.metrics as metrics
+from sklearn.metrics import precision_score, recall_score, f1_score
+import json
+import os
+from collections import Counter
+from tqdm import tqdm
+
+def load_networkx_graph(fp): 
+    with open(fp,'r') as f: 
+        json_graph = json.loads(f.read()) 
+        return nx.readwrite.json_graph.node_link_graph(json_graph) 
+    
+    
+def get_graph(graph_path): 
+    nx_graph = load_networkx_graph(graph_path) 
+    features = np.array([nx_graph.nodes[n]['features'] for n in nx_graph.nodes]) 
+    labels = np.array([nx_graph.nodes[n]['label'] for n in nx_graph.nodes]) 
+    
+    # Mappatura delle etichette 
+    label_mapping = {0: 3, 1: 2, 2: 1, 3: 4} 
+    labels = np.vectorize(label_mapping.get)(labels) 
+    
+    G = dgl.from_networkx(nx_graph) 
+    n_edges = G.number_of_edges() 
+    # normalization 
+    degs = G.in_degrees().float() 
+    norm = torch.pow(degs, -0.5) 
+    norm[torch.isinf(norm)] = 0 
+    G.ndata['norm'] = norm.unsqueeze(1) 
+    #G.ndata['feat'] = features 
+    return (G, features, labels) 
+
+
+def generate_dgl_dataset(dataset_path):
+    print(f'generating the dataset form {dataset_path}')
+    subdirectories = [d for d in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, d))]
+    new_graphs = [] 
+    for subdir in tqdm(subdirectories):
+        subdir_path = os.path.join(dataset_path, subdir)
+        try:
+            id, flag = get_patient_ids([f"{dataset_path}/{subdir}"])
+            for filename in os.listdir(subdir_path):
+                file_type = (filename.split("_")[2]).split(".")[0]
+                if file_type in ['nxgraph']:
+                    triple = get_graph(f'{dataset_path}/{subdir}/BraTS2021_{id[0]}_nxgraph.json') 
+                    new_graphs.append(triple)
+
+        except Exception as e:
+            print(f'Error: {e}')
+    print('Success! The dataset has been generated.')
+    with open('full_dataset.pickle', 'wb') as f:
+        pickle.dump(new_graphs, f)
+    return new_graphs
+
+
+def create_batches(data, batch_size):
+    # Create batches of graphs, features, labels
+    batches = []
+    for i in range(0, len(data), batch_size):
+        batch = data[i:i + batch_size]
+        graphs, features, labels = zip(*batch)
+        
+        # convert features and labels to tensors if they are not
+        features = [torch.tensor(f) if isinstance(f, np.ndarray) else f for f in features]
+        labels = [torch.tensor(l) if isinstance(l, np.ndarray) else l for l in labels]
+
+        batched_graph = dgl.batch(graphs)  # Here we batch graphs
+        # Keep features as a list because they have different sizes
+        batched_features = features
+        batched_labels = labels
+        batches.append((batched_graph, batched_features, batched_labels))
+    return batches
+
+
+def batch_dataset(dataset):
+    batched_data = []
+    current_batch = []
+    for item in dataset:
+        current_batch.append(item)
+        if len(current_batch) == 6:
+            batched_data.append(current_batch)
+            current_batch = []
+    if current_batch:
+        # If there are remaining items that don't fill a complete batch
+        batched_data.append(current_batch)
+    return batched_data
 
 def get_coordinates(tumor_seg, values=[1, 2, 4]):
 
@@ -74,23 +159,12 @@ def add_labels_to_single_graph(tumor_seg, slic_image, graph):
     return graph    
 
 
-def generate_tumor_segmentation_from_graph(segmented_image, graph):
-    # Create a dictionary to map node IDs to their labels
-    node_label_map = {int(n): graph.nodes[n]['label'] for n in graph.nodes()}
-    
-    # Create a mask for labels to keep (1, 2, and 4)
-    labels_to_keep = np.array([1, 2, 4])
-    
-    # Replace node IDs in segmented_image with their corresponding labels
-    label_image = np.vectorize(node_label_map.get)(segmented_image)
-    
-    # Use np.isin to create a boolean mask for the labels we want to keep
-    mask = np.isin(label_image, labels_to_keep)
-    
-    # Use np.where to create the segmented tumor image
-    segmented_tumor = np.where(mask, label_image, 0)
-    
-    return segmented_tumor
+def generate_tumor_segmentation_from_graph(json_graph, predicted_labels, slic): 
+    node_ids = list(json_graph.nodes) 
+    supervoxels = np.unique(slic) 
+    label_map = dict(zip(supervoxels, list(predicted_labels)[:len(supervoxels)])) 
+    slic = np.vectorize(label_map.get)(slic) 
+    return slic
     
 
 def tensor_labels(segmented_image, labels_generated, empty_RAG, id_patient, save=False):
@@ -151,41 +225,20 @@ def load_dgl_graphs_from_bin(file_path, ids_path):
     return dgl_graph_list, ids
 
 
-def prune_graphs(dgl_train_graphs):
-    pruned_graphs = []
-
-    for g in dgl_train_graphs:
-        # Get the indices of nodes with label 3 and not 3
-        labels = g.ndata["label"]
-        nodes_label_3 = (labels == 3).nonzero(as_tuple=True)[0].tolist()
-        nodes_not_3 = (labels != 3).nonzero(as_tuple=True)[0].tolist()
-
-        # Calculate the number of nodes to remove
-        total_nodes = len(labels)
-        nodes_to_remove_count = total_nodes - 3 * len(nodes_not_3)
-
-        # Remove 'nodes_to_remove_count' nodes with label 3
-        nodes_to_remove = nodes_label_3[:nodes_to_remove_count]
-
-        # Remove nodes from the graph
-        pruned_g = dgl.remove_nodes(g, nodes_to_remove)
-
-        # Add the pruned graph to the new list
-        pruned_graphs.append(pruned_g)
-
-    return pruned_graphs
-
-
-def count_labels(graphs):
+def count_labels(triple_list):
     label_counts = {}
-    for graph in graphs:
-        labels = graph.ndata['label'].tolist()
-        for label in labels:
-            if label in label_counts:
-                label_counts[label] += 1
-            else:
-                label_counts[label] = 1
-    return label_counts
+    labels = [triple[2] for triple in triple_list]
+
+    # Concatenate all the arrays into one 
+    all_labels = np.concatenate(labels) 
+
+    # Count the occurrences of each label 
+    counter = Counter(all_labels) 
+
+    # Create a dict with the counts for labels 1 to 4 
+    counts_dict = {i+1: counter[i+1] for i in range(4)} 
+
+    return counts_dict
 
 
 def class_weights_tensor(label_weights):
@@ -201,49 +254,50 @@ def class_weights_tensor(label_weights):
 
 
 def compute_average_weights(graphs):
+    print('computing weights...')
     label_counts = count_labels(graphs)
     total_count = sum(label_counts.values())
     class_weights = {label: total_count / count for label, count in label_counts.items()}
     weight_tensor = class_weights_tensor(class_weights)
     return weight_tensor
 
-def compute_metrics(predicted_labels, true_labels):
-
-    # Set values 1, 2, and 4 to 1, and all other values to 0 for both pred and labels
-    pred_modified = (predicted_labels == 1) | (predicted_labels == 2) | (predicted_labels == 4)
-    labels_modified = (true_labels == 1) | (true_labels == 2) | (true_labels == 4)
-
-    # Convert the boolean tensors to integer tensors
-    pred_modified = pred_modified.to(torch.int)
-    labels_modified = labels_modified.to(torch.int)
-
-    # Convert the tensors to NumPy arrays
-    pred_modified_np = pred_modified.numpy()
-    labels_modified_np = labels_modified.numpy()
-
-    # Calculate F1-score, precision, and recall
-    f1 = metrics.f1_score(labels_modified_np, pred_modified_np, zero_division=0)
-    precision = metrics.precision_score(labels_modified_np, pred_modified_np, zero_division=0)
-    recall = metrics.recall_score(labels_modified_np, pred_modified_np, zero_division=0)
-
-    return recall, precision, f1
 
 
-def minmax(features):
-    # Min-Max scaling
-    min_features = torch.min(features, dim=0)[0]
-    max_features = torch.max(features, dim=0)[0]
-    range_features = max_features - min_features
-    normalized_features = (features - min_features) / range_features
+HEALTHY = 3
+EDEMA = 4
+NET = 1
+ET = 2
 
-    return normalized_features
+# Calculate nodewise Dice score for WT, CT, and ET for a single brain.
+# Expects two 1D vectors of integers.
+def calculate_node_dices(preds, labels):
+    p, l = preds, labels
 
+    wt_preds = np.where(p == HEALTHY, 0, 1)
+    wt_labs = np.where(l == HEALTHY, 0, 1)
+    wt_dice = calculate_dice_from_logical_array(wt_preds, wt_labs)
 
-def standardize_features(features):
-    mean_features = torch.mean(features, dim=0)
-    std_features = torch.std(features, dim=0)
-    standardized_features = (features - mean_features) / (std_features + 1e-8)  # Adding a small value to avoid division by zero
-    return standardized_features
+    ct_preds = np.isin(p, [NET, ET]).astype(int)
+    ct_labs = np.isin(l, [NET, ET]).astype(int)
+    ct_dice = calculate_dice_from_logical_array(ct_preds, ct_labs)
+
+    at_preds = np.where(p == ET, 1, 0)
+    at_labs = np.where(l == ET, 1, 0)
+    at_dice = calculate_dice_from_logical_array(at_preds, at_labs)
+
+    return wt_dice, ct_dice, at_dice
+
+# Each tumor region (WT, CT, ET) is binarized for both the prediction and ground truth 
+# and then the overlapping volume is calculated.
+def calculate_dice_from_logical_array(binary_predictions, binary_ground_truth):
+    true_positives = np.logical_and(binary_predictions == 1, binary_ground_truth == 1)
+    false_positives = np.logical_and(binary_predictions == 1, binary_ground_truth == 0)
+    false_negatives = np.logical_and(binary_predictions == 0, binary_ground_truth == 1)
+    tp, fp, fn = np.count_nonzero(true_positives), np.count_nonzero(false_positives), np.count_nonzero(false_negatives)
+    # The case where no such labels exist (only really relevant for ET case).
+    if (tp + fp + fn) == 0:
+        return 1
+    return (2 * tp) / (2 * tp + fp + fn)
 
 
 import networkx as nx
@@ -291,5 +345,17 @@ def DGLGraph_plotter(nx_graph):
     plt.show()
 
 
+def predict(graph, feature, model):
 
+    feature = torch.tensor(feature).float()
+    
+    # Use the model to get the output logits
+    with torch.no_grad(): # Inference only
+        logits = model(graph, feature)
+    pred = logits.argmax(1)
+    pred = pred + 1
+
+    pred[pred == 3] = 0
+    
+    return pred
 

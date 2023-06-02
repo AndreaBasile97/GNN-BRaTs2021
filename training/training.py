@@ -1,15 +1,16 @@
 import torch
 import torch.nn.functional as F
-from training.utilities import compute_average_weights, generate_dgl_dataset, create_batches, batch_dataset
+from utilities import compute_average_weights, generate_dgl_dataset, create_batches, batch_dataset, load_networkx_graph
 import torch.optim as optim
 import os
 import warnings
 import pandas as pd
+import torch
 import numpy as np
 import pickle
 import random
 from tqdm import tqdm
-from evaluations.compute_metrics import calculate_node_dices, voxel_wise_batch_score
+from evaluations.compute_metrics import calculate_node_dices
 from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
 # Ignore UserWarning related to TypedStorage deprecation
@@ -19,9 +20,8 @@ os.environ["DGLBACKEND"] = "pytorch"
 
 
 
-
 ####### LOAD THE DATASET  AND SPLIT TRAIN - TEST - VAL ########
-with open('full_dataset_with_id.pickle', 'rb') as f:
+with open('/ext/home/d_amendola/Training/full_dataset_with_id.pickle', 'rb') as f:
     dataset = pickle.load(f)
 random.seed(42)  # Set the random seed to ensure reproducibility
 
@@ -55,150 +55,15 @@ val_batches = list(grouper(val_data, 6))
 test_batches = list(grouper(test_data, 6))
 
 
-
-
-def train(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
-
-    # Define the optimizer
-    optimizer = optim.AdamW(model.parameters(), lr=0.0001)
-
-
-    print('Training started...')
-
-    metrics = []
-    patience = 10  # number of epochs to wait for improvement before stopping
-    best_val_loss = float('inf')
-    wait = 0
-
-    for e in range(500):
-        model.train()
-
-        total_loss = 0
-        total_dice_wt = 0
-        total_dice_ct = 0
-        total_dice_et = 0
-
-        for g, feature, label in tqdm(dgl_train_graphs, desc=f"Training epoch {e}"):
-
-            # Get the features, labels, and masks for the current graph
-            features = torch.tensor(feature).float()
-
-            labels = torch.tensor(label).long()
-
-            # 1,2,3,4 -> 0,1,2,3
-            labels = labels - 1
-
-            # Forward pass
-            logits = model(g, features)
-
-            # Compute prediction
-            pred = logits.argmax(1)
-
-            # Compute loss with class weights
-            loss = F.cross_entropy(logits, labels, weight=loss_w)
-
-            # 0,1,2,3 -> 1,2,3,4
-            pred = pred + 1
-            labels = labels + 1
- 
-            dice_wt, dice_ct, dice_et = calculate_node_dices(pred, labels)
-            total_loss += loss.item()
-            total_dice_wt += dice_wt
-            total_dice_ct += dice_ct
-            total_dice_et += dice_et
-            
-            # Backward pass
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        # Compute average loss and accuracy values across all graphs
-        avg_loss = total_loss / len(dgl_train_graphs)
-        avg_train_dice_wt = total_dice_wt / len(dgl_train_graphs)
-        avg_train_dice_ct = total_dice_ct / len(dgl_train_graphs)
-        avg_train_dice_et = total_dice_et / len(dgl_train_graphs)
-
-        total_val_dice_wt = 0
-        total_val_dice_ct = 0
-        total_val_dice_et = 0
-        total_val_loss = 0
-
-        model.eval()
-        with torch.no_grad():
-            for g, feature, label in tqdm(dgl_validation_graphs, desc=f"Training epoch {e}"):
-                # Get the features, labels, and masks for the current graph
-                features = torch.tensor(feature).float()
-
-                val_labels = torch.tensor(label).long()
-                val_labels = val_labels -1
-
-                # Forward pass
-                logits = model(g, features)
-
-                # Compute prediction
-                val_pred = logits.argmax(1)
-
-                # Compute loss with class weights
-                val_loss = F.cross_entropy(logits, val_labels)  
-
-                val_pred = val_pred + 1
-                val_labels = val_labels + 1
-                val_dice_wt, val_dice_ct, val_dice_et = calculate_node_dices(val_pred, val_labels)
-
-                total_val_loss += val_loss.item()
-                total_val_dice_wt += val_dice_wt
-                total_val_dice_ct += val_dice_ct
-                total_val_dice_et += val_dice_et
-
-        avg_val_loss = total_val_loss / len(dgl_validation_graphs)
-        avg_val_dice_wt = total_val_dice_wt / len(dgl_validation_graphs)
-        avg_val_dice_ct = total_val_dice_ct / len(dgl_validation_graphs)
-        avg_val_dice_et = total_val_dice_et / len(dgl_validation_graphs)
-
-
-        metrics.append({
-            'epoch': e,
-            'loss': avg_loss,
-            'dice_score_train_WT': avg_train_dice_wt,
-            'dice_score_train_CT': avg_train_dice_ct,
-            'dice_score_train_ET': avg_train_dice_et,
-            'val_loss': avg_val_loss,
-            'dice_score_val_WT': avg_val_dice_wt,
-            'dice_score_val_CT': avg_val_dice_ct,
-            'dice_score_val_ET': avg_val_dice_et
-        })
-
-        if avg_val_loss < best_val_loss:
-            best_val_loss = avg_val_loss
-            wait = 0
-        else:
-            wait += 1
-            if wait >= patience:
-                print("Early stopping...")
-                break
-
-        # if e % 5 == 0:
-        print(f"EPOCH {e} | loss: {avg_loss:.3f} | dice-score train WT: {avg_train_dice_wt:.3f} | dice-score train CT: {avg_train_dice_ct:.3f} | dice-score train ET: {avg_train_dice_et:.3f} || val_loss:{avg_val_loss:.3f} | dice-score val WT: {avg_val_dice_wt:.3f} | dice-score val CT: {avg_val_dice_ct:.3f} | dice-score val ET: {avg_val_dice_et:.3f} ")
-
-    # Save metrics to a CSV file
-    df_metrics = pd.DataFrame(metrics)
-    df_metrics.to_csv('training_metrics.csv', index=False)
-
-    torch.save(model.state_dict(), f'model_epoch_{e}.pth')
-
-
-
-
 import dgl
 def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
     # Define the optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0003, weight_decay=0.0001)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0005, weight_decay=0.0001)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
 
     print('Training started...')
 
     metrics = []
-    dice_hd95_matrix = np.empty((0,6), int)
     patience = 10  # number of epochs to wait for improvement before stopping
     best_val_loss = float('inf')
     wait = 0
@@ -214,7 +79,6 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
         total_dice_wt = 0
         total_dice_ct = 0
         total_dice_et = 0
-        total_batch_mean = 0
 
         for batch in tqdm(dgl_train_graphs, desc=f"Training epoch {e}"):
 
@@ -265,8 +129,7 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
                 bg = dgl.batch([data[0] for data in batch])  # batched graph
                 features = torch.cat([torch.tensor(data[1]).float() for data in batch], dim=0)  # concatenate features
                 labels = torch.cat([torch.tensor(data[2]).long() - 1 for data in batch], dim=0)  # Offset the labels and concatenate        
-                ids = [data[3] for data in batch]
-                
+
                 # Forward pass
                 logits = model(bg, features)
 
@@ -281,34 +144,26 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
                 labels = labels + 1
 
                 dice_wt, dice_ct, dice_et = calculate_node_dices(pred, labels)
-                batch_dice_hd95 = voxel_wise_batch_score(pred, ids)
-
                 total_val_loss += loss.item()
                 total_val_dice_wt += dice_wt
                 total_val_dice_ct += dice_ct
                 total_val_dice_et += dice_et
-                dice_hd95_matrix = np.vstack([dice_hd95_matrix, batch_dice_hd95])
-        
-    
+
         avg_val_loss = total_val_loss / len(dgl_validation_graphs)
         avg_val_dice_wt = total_val_dice_wt / len(dgl_validation_graphs)
         avg_val_dice_ct = total_val_dice_ct / len(dgl_validation_graphs)
         avg_val_dice_et = total_val_dice_et / len(dgl_validation_graphs)
-        avg_val_dice_hd95 = np.mean(dice_hd95_matrix , axis=0) # wt_dice, ct_dice, at_dice, wt_hd, ct_hd, at_hd
 
         metrics.append({
             'epoch': e,
             'loss': avg_loss,
+            'dice_score_train_WT': avg_train_dice_wt,
+            'dice_score_train_CT': avg_train_dice_ct,
+            'dice_score_train_ET': avg_train_dice_et,
             'val_loss': avg_val_loss,
             'dice_score_val_WT': avg_val_dice_wt,
             'dice_score_val_CT': avg_val_dice_ct,
-            'dice_score_val_ET': avg_val_dice_et,
-            'WT_dice_voxels': avg_val_dice_hd95[0],
-            'CT_dice_voxels': avg_val_dice_hd95[1],
-            'AT_dice_voxels': avg_val_dice_hd95[2],
-            'WT_hd95_voxels': avg_val_dice_hd95[3],
-            'CT_hd95_voxels': avg_val_dice_hd95[4],
-            'ET_hd95_voxels': avg_val_dice_hd95[5]
+            'dice_score_val_ET': avg_val_dice_et
         })
 
         if avg_val_loss < best_val_loss:
@@ -320,9 +175,7 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
                 print("Early stopping...")
                 break
 
-        # print(f"EPOCH {e} | loss: {avg_loss:.3f} | dice-score train WT: {avg_train_dice_wt:.3f} | dice-score train CT: {avg_train_dice_ct:.3f} | dice-score train ET: {avg_train_dice_et:.3f} || val_loss:{avg_val_loss:.3f} | dice-score val WT: {avg_val_dice_wt:.3f} | dice-score val CT: {avg_val_dice_ct:.3f} | dice-score val ET: {avg_val_dice_et:.3f} ")
-        print(f"EPOCH {e} | loss: {avg_loss:.3f} || val_loss:{avg_val_loss:.3f} | dice-score val WT: {avg_val_dice_wt:.3f} | dice-score val CT: {avg_val_dice_ct:.3f} | dice-score val ET: {avg_val_dice_et:.3f} | \
-              WT_dice_voxels: {avg_val_dice_hd95[0]} | 'CT_dice_voxels': {avg_val_dice_hd95[1]} | AT_dice_voxels: {avg_val_dice_hd95[2]} | WT_hd95_voxels: {avg_val_dice_hd95[3]} | CT_hd95_voxels: {avg_val_dice_hd95[4]} | ET_hd95_voxels: {avg_val_dice_hd95[5]} ")
+        print(f"EPOCH {e} | loss: {avg_loss:.3f} | dice-score train WT: {avg_train_dice_wt:.3f} | dice-score train CT: {avg_train_dice_ct:.3f} | dice-score train ET: {avg_train_dice_et:.3f} || val_loss:{avg_val_loss:.3f} | dice-score val WT: {avg_val_dice_wt:.3f} | dice-score val CT: {avg_val_dice_ct:.3f} | dice-score val ET: {avg_val_dice_et:.3f} ")
 
         # Save metrics to a CSV file
         df_metrics = pd.DataFrame(metrics)
@@ -333,23 +186,26 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
 
 
 
-# # FEATURES - HIDDEN LAYERS DIM - HEADS - CLASSES
-# model = GATDummy(20, 256, 4, 4)
 
-from models.GATSage import GAT
+from models.GATSage import GraphSage
 
 avg_weights = compute_average_weights(val_data)
 
+print(f'CrossEntropyLoss weights: {avg_weights}')
 
 # Define GAT parameters
 in_feats = 20
-layer_sizes = [256]
+layer_sizes = [256, 256, 256, 256, 256, 256]
 n_classes = 4
-heads = [2, 2, 2, 2, 2]
-residuals = [True, True, True, True, True]
+heads = [6, 6, 6, 6, 6, 6]
+residuals = [True, True, True, True, True, True]
+
+
 
 # Create GAT model
-model = GAT(in_feats, layer_sizes, n_classes, heads, residuals)
+# model = GAT(in_feats, layer_sizes, n_classes, heads, residuals)
+model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = 0)
 trained_model = train_batch(train_batches, val_batches, model, avg_weights)
 # trained_model = train(train_data, val_data, model, avg_weights)
+
 
