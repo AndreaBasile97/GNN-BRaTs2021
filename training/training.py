@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from utilities import compute_average_weights, generate_dgl_dataset, create_batches, batch_dataset, load_networkx_graph
+from training.utilities import compute_average_weights, generate_dgl_dataset, create_batches, batch_dataset, load_networkx_graph
 import torch.optim as optim
 import os
 import warnings
@@ -13,15 +13,18 @@ from tqdm import tqdm
 from evaluations.compute_metrics import calculate_node_dices
 from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
+from dotenv import load_dotenv
 # Ignore UserWarning related to TypedStorage deprecation
 warnings.filterwarnings("ignore", category=UserWarning, message="TypedStorage is deprecated")
 os.environ["DGLBACKEND"] = "pytorch"
 
 
+load_dotenv()
+dataset_pickle_path = os.getenv('DATASET_PICKLE_PATH')
 
 
 ####### LOAD THE DATASET  AND SPLIT TRAIN - TEST - VAL ########
-with open('/ext/home/d_amendola/Training/full_dataset_with_id.pickle', 'rb') as f:
+with open('dataset_pickle_path', 'rb') as f:
     dataset = pickle.load(f)
 random.seed(42)  # Set the random seed to ensure reproducibility
 

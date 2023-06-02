@@ -16,3 +16,5 @@ evaluations/__pycache__/compute_metrics.cpython-310.pyc
 full_dataset.pickle
 training_metrics.csv
 full_dataset_with_id.pickle
+pickle_dataset
+.env
