@@ -159,8 +159,7 @@ def add_labels_to_single_graph(tumor_seg, slic_image, graph):
     return graph    
 
 
-def generate_tumor_segmentation_from_graph(json_graph, predicted_labels, slic): 
-    node_ids = list(json_graph.nodes) 
+def generate_tumor_segmentation_from_graph(predicted_labels, slic): 
     supervoxels = np.unique(slic) 
     label_map = dict(zip(supervoxels, list(predicted_labels)[:len(supervoxels)])) 
     slic = np.vectorize(label_map.get)(slic) 

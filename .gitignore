@@ -18,3 +18,5 @@ training_metrics.csv
 full_dataset_with_id.pickle
 pickle_dataset
 .env
+full_dataset_with_id_006.pickle
+model_epoch_25.pth
