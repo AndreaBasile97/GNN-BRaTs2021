@@ -14,6 +14,11 @@ from evaluations.compute_metrics import calculate_node_dices
 from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
 from dotenv import load_dotenv
+import datetime
+
+
+timestamp = datetime.datetime.now()
+
 # Ignore UserWarning related to TypedStorage deprecation
 warnings.filterwarnings("ignore", category=UserWarning, message="TypedStorage is deprecated")
 os.environ["DGLBACKEND"] = "pytorch"
@@ -64,7 +69,8 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.0005, weight_decay=0.0001)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
 
-    print('Training started...')
+    timestamp = datetime.datetime.now()
+    print('Training started at: ')
 
     metrics = []
     patience = 10  # number of epochs to wait for improvement before stopping
@@ -203,7 +209,18 @@ n_classes = 4
 heads = [6, 6, 6, 6, 6, 6]
 residuals = [True, True, True, True, True, True]
 
+# Open the file in write mode ('w')
+with open(f'training_{timestamp}_settings.txt', 'w') as f:
+    # Write each variable on its own line
+    f.write(f'in_feats = {in_feats}\n')
+    f.write(f'layer_sizes = {layer_sizes}\n')
+    f.write(f'n_classes = {n_classes}\n')
+    f.write(f'heads = {heads}\n')
+    f.write(f'residuals = {residuals}\n')
 
+    # Get the current timestamp and write it to the file
+    timestamp = datetime.datetime.now()
+    f.write(f'timestamp = {timestamp}\n')
 
 # Create GAT model
 # model = GAT(in_feats, layer_sizes, n_classes, heads, residuals)
