@@ -15,6 +15,16 @@ from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
 from dotenv import load_dotenv
 import datetime
+import argparse
+
+# Create the parser 
+parser = argparse.ArgumentParser() 
+# Add an argument for the model 
+parser.add_argument('--model', type=str, required=True, help="Name of the model") 
+# Parse the arguments 
+args = parser.parse_args() 
+# You can now access the model argument with args.model 
+print(f'Training with model: {args.model}')
 
 
 timestamp = datetime.datetime.now()
@@ -197,7 +207,7 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
 
 
 
-from models.GATSage import GraphSage
+from models.GATSage import GraphSage, GAT
 
 avg_weights = compute_average_weights(val_data)
 
@@ -210,20 +220,26 @@ n_classes = 4
 heads = [6, 6, 6, 6, 6, 6]
 residuals = [True, True, True, True, True, True]
 
+
+# Create GAT model
+if args.model == 'GraphSage':
+    model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = 0.25)
+elif args.model == 'GAT':
+    model = GAT(in_feats, layer_sizes, n_classes, heads, residuals)
+
+
 # Open the file in write mode ('w')
 with open(f'training_{timestamp}_settings.txt', 'w') as f:
+    f.write(f'model = {model}\n')
     # Write each variable on its own line
     f.write(f'in_feats = {in_feats}\n')
     f.write(f'layer_sizes = {layer_sizes}\n')
     f.write(f'n_classes = {n_classes}\n')
-    f.write(f'heads = {heads}\n')
-    f.write(f'residuals = {residuals}\n')
+    if args.model == 'GAT':
+        f.write(f'heads = {heads}\n')
+        f.write(f'residuals = {residuals}\n')
     f.write(f'timestamp = {timestamp}\n')
 
-# Create GAT model
-# model = GAT(in_feats, layer_sizes, n_classes, heads, residuals)
-model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = 0)
+
 trained_model = train_batch(train_batches, val_batches, model, avg_weights)
 # trained_model = train(train_data, val_data, model, avg_weights)
-
-
