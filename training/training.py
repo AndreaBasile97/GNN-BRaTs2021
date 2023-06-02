@@ -217,9 +217,6 @@ with open(f'training_{timestamp}_settings.txt', 'w') as f:
     f.write(f'n_classes = {n_classes}\n')
     f.write(f'heads = {heads}\n')
     f.write(f'residuals = {residuals}\n')
-
-    # Get the current timestamp and write it to the file
-    timestamp = datetime.datetime.now()
     f.write(f'timestamp = {timestamp}\n')
 
 # Create GAT model
