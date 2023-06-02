@@ -191,7 +191,7 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
         string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
         df_metrics.to_csv(f'training_metrics_{string_timestamp}.csv', index=False)
 
-    torch.save(model.state_dict(), f'model_epoch_{e}.pth')
+    torch.save(model.state_dict(), f'model_epoch_{e}_{string_timestamp}.pth')
 
 
 
