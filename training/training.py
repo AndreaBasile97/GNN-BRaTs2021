@@ -74,16 +74,15 @@ test_batches = list(grouper(test_data, 6))
 
 
 import dgl
-def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w):
+def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w, patience, lr, weight_decay, gamma):
     # Define the optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0005, weight_decay=0.0001)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
+    optimizer = torch.optim.AdamW(model.parameters(), lr, weight_decay)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma)
 
     timestamp = datetime.datetime.now()
     print('Training started at: ')
 
     metrics = []
-    patience = 10  # number of epochs to wait for improvement before stopping
     best_val_loss = float('inf')
     wait = 0
 
@@ -220,6 +219,11 @@ n_classes = 4
 heads = [6, 6, 6, 6, 6, 6]
 residuals = [True, True, True, True, True, True]
 
+patience = 10 # number of epochs to wait for improvement before stopping
+lr = 0.0005
+weight_decay = 0.0001
+gamma = 0.98
+
 
 # Create GAT model
 if args.model == 'GraphSage':
@@ -231,6 +235,10 @@ elif args.model == 'GAT':
 # Open the file in write mode ('w')
 with open(f'training_{timestamp}_settings.txt', 'w') as f:
     f.write(f'model = {model}\n')
+    f.write(f'patience = {patience}\n')
+    f.write(f'lr = {lr}\n')
+    f.write(f'weight_decay = {weight_decay}\n')
+    f.write(f'gamma = {gamma}\n')
     # Write each variable on its own line
     f.write(f'in_feats = {in_feats}\n')
     f.write(f'layer_sizes = {layer_sizes}\n')
@@ -241,5 +249,5 @@ with open(f'training_{timestamp}_settings.txt', 'w') as f:
     f.write(f'timestamp = {timestamp}\n')
 
 
-trained_model = train_batch(train_batches, val_batches, model, avg_weights)
+trained_model = train_batch(train_batches, val_batches, model, avg_weights, patience, lr, weight_decay, gamma)
 # trained_model = train(train_data, val_data, model, avg_weights)
