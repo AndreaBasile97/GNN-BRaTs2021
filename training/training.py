@@ -212,7 +212,7 @@ avg_weights = compute_average_weights(val_data)
 
 print(f'CrossEntropyLoss weights: {avg_weights}')
 
-# Define GAT parameters
+# Define parameters
 in_feats = 20
 layer_sizes = [256, 256, 256, 256, 256, 256]
 n_classes = 4
@@ -224,28 +224,38 @@ lr = 0.0005
 weight_decay = 0.0001
 gamma = 0.98
 
+val_dropout = 0.25
 
-# Create GAT model
+# Create model
 if args.model == 'GraphSage':
-    model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = 0.25)
+    model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = val_dropout)
 elif args.model == 'GAT':
     model = GAT(in_feats, layer_sizes, n_classes, heads, residuals)
 
 
 # Open the file in write mode ('w')
 with open(f'training_{timestamp}_settings.txt', 'w') as f:
+    f.write('-- TYPE MODEL --\n')
     f.write(f'model = {model}\n')
+
+    f.write('\n-- HYPERPARAMS --\n')
     f.write(f'patience = {patience}\n')
     f.write(f'lr = {lr}\n')
     f.write(f'weight_decay = {weight_decay}\n')
     f.write(f'gamma = {gamma}\n')
-    # Write each variable on its own line
-    f.write(f'in_feats = {in_feats}\n')
-    f.write(f'layer_sizes = {layer_sizes}\n')
-    f.write(f'n_classes = {n_classes}\n')
     if args.model == 'GAT':
         f.write(f'heads = {heads}\n')
         f.write(f'residuals = {residuals}\n')
+    elif args.model == 'GraphSage':
+        f.write(f'dropout = {val_dropout}')
+    f.write(f'layer_sizes = {layer_sizes}\n')
+    
+    # Write each variable on its own line
+    f.write('\n-- PARAMETERS --\n')
+    f.write(f'in_feats = {in_feats}\n')
+    f.write(f'n_classes = {n_classes}\n')
+    
+    f.write('\n-- DATE --\n')
     f.write(f'timestamp = {timestamp}\n')
 
 
