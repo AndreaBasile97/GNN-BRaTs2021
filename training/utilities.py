@@ -359,11 +359,16 @@ def predict(graph, feature, model):
     
     return pred
 
-def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, \
-                  residuals, val_dropout, layer_sizes, in_feats, n_classes):
+def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, residuals, \
+                  val_dropout, layer_sizes, in_feats, n_classes, feat_drop, attn_drop, dataset_pickle_path):
+    
+    os.makedirs(f'/ext/tesi_BraTS2021/saved_models/{timestamp}')
     # Open the file in write mode ('w')
-    with open(f'training_{timestamp}_settings.txt', 'w') as f:
-        f.write('-- TYPE MODEL --\n')
+    with open(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_{timestamp}_settings.txt', 'w') as f:
+        f.write('-- DATASET PICKLE --\n')
+        f.write(f'dataset pickle = {dataset_pickle_path}\n')
+        
+        f.write('\n-- TYPE MODEL --\n')
         f.write(f'model = {model}\n')
 
         f.write('\n-- HYPERPARAMS --\n')
@@ -374,8 +379,10 @@ def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_mode
         if args_model == 'GAT':
             f.write(f'heads = {heads}\n')
             f.write(f'residuals = {residuals}\n')
+            f.write(f'val_feat_drop = {feat_drop}\n')
+            f.write(f'val_attn_drop = {attn_drop}\n')
         elif args_model == 'GraphSage':
-            f.write(f'dropout = {val_dropout}\n')
+            f.write(f'val_dropout = {val_dropout}\n')
         f.write(f'layer_sizes = {layer_sizes}\n')
 
         # Write each variable on its own line
