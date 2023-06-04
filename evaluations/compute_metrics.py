@@ -2,13 +2,17 @@ import numpy as np
 import nibabel as nib
 from medpy.metric.binary import hd95
 from training.utilities import load_networkx_graph, generate_tumor_segmentation_from_graph
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+dataset_path = os.getenv('DATASET_PATH')
+
 
 HEALTHY = 3
 EDEMA = 2
 NET = 1
 ET = 4
-
-dataset_path = '/ext/train'
 
 # Calculate nodewise Dice score for WT, CT, and ET for a single brain.
 # Expects two 1D vectors of integers.
@@ -28,6 +32,7 @@ def calculate_node_dices(preds, labels):
     at_dice = calculate_dice_from_logical_array(at_preds, at_labs)
 
     return [wt_dice, ct_dice, at_dice]
+
 
 # Each tumor region (WT, CT, ET) is binarized for both the prediction and ground truth 
 # and then the overlapping volume is calculated.
@@ -61,6 +66,7 @@ def calculate_brats_metrics(predicted_voxels,true_voxels):
     at_hd = calculate_hd95_from_logical_array(at_preds,at_gt)
 
     return [wt_dice,ct_dice,at_dice,wt_hd,ct_hd,at_hd]
+
 
 #wrapper around hd95 function that handles the case where one or more labels are missing from the ground truth or prediction.
 def calculate_hd95_from_logical_array(pred,gt):
