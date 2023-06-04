@@ -111,7 +111,7 @@ def voxel_wise_batch_score(predicted_labels, ids_list):
 
         slic = nib.load(f'{dataset_path}/BraTS2021_{id}/BraTS2021_{id}_supervoxels.nii.gz').get_fdata()
         
-        predicted_tumor_segmentation = generate_tumor_segmentation_from_graph(json_graph, splitted_labels, slic)
+        predicted_tumor_segmentation = generate_tumor_segmentation_from_graph(splitted_labels, slic)
         # predicted_tumor_segmentation_list.append(predicted_tumor_segmentation)
         
         wt_dice, ct_dice, at_dice, wt_hd, ct_hd, at_hd = calculate_dice_hd95(predicted_tumor_segmentation, id)
