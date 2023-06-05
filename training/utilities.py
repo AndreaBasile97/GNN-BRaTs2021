@@ -16,6 +16,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 load_dotenv()
 dataset_path = os.getenv('DATASET_PATH')
+metrics_path = os.getenv('METRICS_SAVE_PATH')
 
 def load_networkx_graph(fp): 
     with open(fp,'r') as f: 
@@ -321,10 +322,10 @@ def predict(graph, feature, model):
 
 def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, residuals, \
                   val_dropout, layer_sizes, in_feats, n_classes, feat_drop, attn_drop, dataset_pickle_path):
-    
-    os.makedirs(f'/ext/tesi_BraTS2021/saved_models/{timestamp}')
+    string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
+    os.makedirs(f'{metrics_path}{string_timestamp}')
     # Open the file in write mode ('w')
-    with open(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_{timestamp}_settings.txt', 'w') as f:
+    with open(f'{metrics_path}{string_timestamp}/training_{string_timestamp}_settings.txt', 'w') as f:
         f.write('-- DATASET PICKLE --\n')
         f.write(f'dataset pickle = {dataset_pickle_path}\n')
         
@@ -363,6 +364,7 @@ def get_supervoxel_partitioning(mri_id):
     return read_nifti(fp,np.int16)
 
 def save_voxel_logits(mri_id,node_logits):
+    print('saving logist for ' + mri_id)
     global output_dir
     node_logits=node_logits.detach().cpu().numpy()
     supervoxel_partitioning = get_supervoxel_partitioning(mri_id)
@@ -384,3 +386,18 @@ def save_as_nifti(img,fp):
 def read_nifti(fp,data_type):
     nib_obj = nib.load(fp)
     return np.array(nib_obj.dataobj,dtype=data_type)
+
+def save_splitted_logits(batched_logits, ids):
+    start_index = 0
+    for id in ids:
+        G, features, labels, id = get_graph(f'{dataset_path}/BraTS2021_{id}/BraTS2021_{id}_nxgraph.json', id)
+        num_nodes = len(G.nodes())
+
+        # Extract logits for the current graph
+        logits = batched_logits[start_index : start_index + num_nodes]
+
+        # Save the logits
+        save_voxel_logits(id, logits)
+
+        # Update the starting index for the next graph
+        start_index += num_nodes
