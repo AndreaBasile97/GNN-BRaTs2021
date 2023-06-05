@@ -135,6 +135,12 @@ def calculate_dice_hd95(predicted_tumor_segmentation, id):
     fp = nib.load(f'{dataset_path}/BraTS2021_{id}/BraTS2021_{id}_label.nii.gz')
     label = np.array(fp.dataobj,dtype=np.int16)
 
+    label[label == 3] = 4 # Trasforma le etichette 3 in 4
+    label[label== 2] = -1   # Assegna temporaneamente il valore -1 alle etichette 2
+    label[label == 1] = 2   # Trasforma le etichette 1 in 2
+    label[label == -1] = 1  # Trasforma le etichette temporanee (-1) in 1
+    label[label == 0] = 3  # Trasforma le etichette 0 in 3
+
     wt_dice, ct_dice, at_dice, wt_hd, ct_hd, at_hd = calculate_brats_metrics(predicted_tumor_segmentation, label)
     
     return wt_dice, ct_dice, at_dice, wt_hd, ct_hd, at_hd
