@@ -364,7 +364,6 @@ def get_supervoxel_partitioning(mri_id):
     return read_nifti(fp,np.int16)
 
 def save_voxel_logits(mri_id,node_logits):
-    print('saving logist for ' + mri_id)
     global output_dir
     node_logits=node_logits.detach().cpu().numpy()
     supervoxel_partitioning = get_supervoxel_partitioning(mri_id)
