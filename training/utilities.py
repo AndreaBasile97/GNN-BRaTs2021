@@ -23,7 +23,7 @@ def load_networkx_graph(fp):
         return nx.readwrite.json_graph.node_link_graph(json_graph) 
     
     
-def get_graph(graph_path): 
+def get_graph(graph_path, id): 
     nx_graph = load_networkx_graph(graph_path) 
     features = np.array([nx_graph.nodes[n]['features'] for n in nx_graph.nodes]) 
     labels = np.array([nx_graph.nodes[n]['label'] for n in nx_graph.nodes]) 
@@ -40,7 +40,7 @@ def get_graph(graph_path):
     norm[torch.isinf(norm)] = 0 
     G.ndata['norm'] = norm.unsqueeze(1) 
     #G.ndata['feat'] = features 
-    return (G, features, labels) 
+    return (G, features, labels, id)  
 
 
 def generate_dgl_dataset(dataset_path):
@@ -54,13 +54,13 @@ def generate_dgl_dataset(dataset_path):
             for filename in os.listdir(subdir_path):
                 file_type = (filename.split("_")[2]).split(".")[0]
                 if file_type in ['nxgraph']:
-                    triple = get_graph(f'{dataset_path}/{subdir}/BraTS2021_{id[0]}_nxgraph.json') 
-                    new_graphs.append(triple)
+                    quadruple = get_graph(f'{dataset_path}/{subdir}/BraTS2021_{id[0]}_nxgraph.json', id[0]) 
+                    new_graphs.append(quadruple)
 
         except Exception as e:
             print(f'Error: {e}')
     print('Success! The dataset has been generated.')
-    with open('full_dataset.pickle', 'wb') as f:
+    with open('full_dataset_with_id.pickle', 'wb') as f:
         pickle.dump(new_graphs, f)
     return new_graphs
 
@@ -96,6 +96,7 @@ def batch_dataset(dataset):
         # If there are remaining items that don't fill a complete batch
         batched_data.append(current_batch)
     return batched_data
+
 
 def get_coordinates(tumor_seg, values=[1, 2, 4]):
 
@@ -264,50 +265,6 @@ def compute_average_weights(graphs):
     return weight_tensor
 
 
-
-HEALTHY = 3
-EDEMA = 4
-NET = 1
-ET = 2
-
-# Calculate nodewise Dice score for WT, CT, and ET for a single brain.
-# Expects two 1D vectors of integers.
-def calculate_node_dices(preds, labels):
-    p, l = preds, labels
-
-    wt_preds = np.where(p == HEALTHY, 0, 1)
-    wt_labs = np.where(l == HEALTHY, 0, 1)
-    wt_dice = calculate_dice_from_logical_array(wt_preds, wt_labs)
-
-    ct_preds = np.isin(p, [NET, ET]).astype(int)
-    ct_labs = np.isin(l, [NET, ET]).astype(int)
-    ct_dice = calculate_dice_from_logical_array(ct_preds, ct_labs)
-
-    at_preds = np.where(p == ET, 1, 0)
-    at_labs = np.where(l == ET, 1, 0)
-    at_dice = calculate_dice_from_logical_array(at_preds, at_labs)
-
-    return wt_dice, ct_dice, at_dice
-
-# Each tumor region (WT, CT, ET) is binarized for both the prediction and ground truth 
-# and then the overlapping volume is calculated.
-def calculate_dice_from_logical_array(binary_predictions, binary_ground_truth):
-    true_positives = np.logical_and(binary_predictions == 1, binary_ground_truth == 1)
-    false_positives = np.logical_and(binary_predictions == 1, binary_ground_truth == 0)
-    false_negatives = np.logical_and(binary_predictions == 0, binary_ground_truth == 1)
-    tp, fp, fn = np.count_nonzero(true_positives), np.count_nonzero(false_positives), np.count_nonzero(false_negatives)
-    # The case where no such labels exist (only really relevant for ET case).
-    if (tp + fp + fn) == 0:
-        return 1
-    return (2 * tp) / (2 * tp + fp + fn)
-
-
-import networkx as nx
-import matplotlib.pyplot as plt
-
-import networkx as nx
-import matplotlib.pyplot as plt
-
 def DGLGraph_plotter(nx_graph):
     # Color Map
     color_map = {3: (0.5, 0.5, 0.5, 0.2), 1: 'blue', 2: 'yellow', 4: 'red'}
@@ -362,24 +319,16 @@ def predict(graph, feature, model):
     return pred
 
 
-def predict_probs(data_asarray, model, target_class):
-    graph, features, label, id = data_asarray
-    features = torch.tensor(features).float()
-    with torch.no_grad(): 
-        logits = model(graph, features)
-        # Apply softmax to logits to get probabilities
-        probabilities = torch.nn.functional.softmax(logits, dim=1)
-        # Extract the probability of the target_class
-        return probabilities[:, target_class].numpy()
-
-
-
-
-def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, \
-                  residuals, val_dropout, layer_sizes, in_feats, n_classes):
+def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, residuals, \
+                  val_dropout, layer_sizes, in_feats, n_classes, feat_drop, attn_drop, dataset_pickle_path):
+    
+    os.makedirs(f'/ext/tesi_BraTS2021/saved_models/{timestamp}')
     # Open the file in write mode ('w')
-    with open(f'training_{timestamp}_settings.txt', 'w') as f:
-        f.write('-- TYPE MODEL --\n')
+    with open(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_{timestamp}_settings.txt', 'w') as f:
+        f.write('-- DATASET PICKLE --\n')
+        f.write(f'dataset pickle = {dataset_pickle_path}\n')
+        
+        f.write('\n-- TYPE MODEL --\n')
         f.write(f'model = {model}\n')
 
         f.write('\n-- HYPERPARAMS --\n')
@@ -390,8 +339,10 @@ def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_mode
         if args_model == 'GAT':
             f.write(f'heads = {heads}\n')
             f.write(f'residuals = {residuals}\n')
+            f.write(f'val_feat_drop = {feat_drop}\n')
+            f.write(f'val_attn_drop = {attn_drop}\n')
         elif args_model == 'GraphSage':
-            f.write(f'dropout = {val_dropout}\n')
+            f.write(f'val_dropout = {val_dropout}\n')
         f.write(f'layer_sizes = {layer_sizes}\n')
 
         # Write each variable on its own line

@@ -74,12 +74,12 @@ test_batches = list(grouper(test_data, 6))
 
 
 import dgl
-def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w, patience, val_lr, val_weight_decay, val_gamma):
+def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_w, patience, val_lr, val_weight_decay, val_gamma):
     # Define the optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr = val_lr, weight_decay = val_weight_decay)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = val_gamma)
 
-    timestamp = datetime.datetime.now()
+    # timestamp = datetime.datetime.now()
     print(f'Training started at: {timestamp}')
 
     metrics = []
@@ -198,9 +198,9 @@ def train_batch(dgl_train_graphs, dgl_validation_graphs, model, loss_w, patience
         # Save metrics to a CSV file
         df_metrics = pd.DataFrame(metrics)
         string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
-        df_metrics.to_csv(f'training_metrics_{string_timestamp}.csv', index=False)
+        df_metrics.to_csv(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_metrics_{string_timestamp}.csv', index=False)
 
-    torch.save(model.state_dict(), f'model_epoch_{e}_{string_timestamp}.pth')
+    torch.save(model.state_dict(), f'/ext/tesi_BraTS2021/saved_models/{timestamp}/model_epoch_{e}_{string_timestamp}.pth')
 
 
 
@@ -214,27 +214,29 @@ print(f'CrossEntropyLoss weights: {avg_weights}')
 
 # Define parameters
 in_feats = 20
-layer_sizes = [256, 256, 256, 256, 256, 256]
+layer_sizes = [512, 512, 512, 512, 512, 512]
 n_classes = 4
-heads = [6, 6, 6, 6, 6, 6]
-residuals = [True, True, True, True, True, True]
+heads = [8, 8, 8, 8, 8, 8]
+residuals = [False, True, True, False, True, True]
 
 patience = 10 # number of epochs to wait for improvement before stopping
 lr = 0.0005
-weight_decay = 0.0001
+weight_decay = 0.0001 
 gamma = 0.98
 
 val_dropout = 0.25
+val_feat_drop = 0.5
+val_attn_drop = 0.5
 
 # Create model
 if args.model == 'GraphSage':
     model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = val_dropout)
 elif args.model == 'GAT':
-    model = GAT(in_feats, layer_sizes, n_classes, heads, residuals)
+    model = GAT(in_feats, layer_sizes, n_classes, heads, residuals, feat_drop = val_feat_drop, attn_drop = val_attn_drop)
 
-save_settings(timestamp, model, patience, lr, weight_decay, gamma, args.model, heads, \
-                  residuals, val_dropout, layer_sizes, in_feats, n_classes)
+save_settings(timestamp, model, patience, lr, weight_decay, gamma, args.model, heads, residuals, \
+              val_dropout, layer_sizes, in_feats, n_classes, val_feat_drop, val_attn_drop, dataset_pickle_path)
 
 
-trained_model = train_batch(train_batches, val_batches, model, avg_weights, patience, lr, weight_decay, gamma)
+trained_model = train_batch(timestamp, train_batches, val_batches, model, avg_weights, patience, lr, weight_decay, gamma)
 # trained_model = train(train_data, val_data, model, avg_weights)
