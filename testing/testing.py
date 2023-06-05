@@ -28,6 +28,7 @@ print(f'Training with model: {args.model}')
 load_dotenv()
 dataset_pickle_path = os.getenv('DATASET_PICKLE_PATH')
 val_model_path = os.getenv('MODEL_PATH')
+metrics_path = os.getenv('METRICS_TESTING_SAVE_PATH')
 
 timestamp = datetime.datetime.now()
 
@@ -112,7 +113,7 @@ def testing_batch(timestamp, dgl_test_graphs, model):
         # Save metrics to a CSV file
         df_metrics = pd.DataFrame(metrics)
         string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
-        df_metrics.to_csv(f'/ext/tesi_BraTS2021/testing_metrics/{timestamp}/testing_metrics_{string_timestamp}.csv', index=False)
+        df_metrics.to_csv(f'{metrics_path}/{string_timestamp}/testing_metrics_{string_timestamp}.csv', index=False)
 
             
 
