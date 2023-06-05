@@ -5,25 +5,6 @@ from scipy import ndimage
 A small collection of helper functions for image processing
 '''
 
-def determine_tumor_crop(preds):
-    mask = preds!=0
-    #make it a bit bigger
-    mask = ndimage.binary_dilation(mask)
-    #if no tumor is predicted by GNN (should happen extremely rarely with a trained GNN), then return whole uncropped image
-    if(np.all(~mask)):
-        print("No GNN predicted tumor, not cropping image")
-        mask = ~mask
-    ix = np.ix_(mask.any(axis=(1,2)),mask.any(axis=(0,2)),mask.any(axis=(0,1)))
-    return ix
-
-
-#uncrops image back to full size (fills space around with healthy preds)
-def uncrop_to_brats_size(crop,voxel_preds):
-    #in the case that the size isnt standard you can also read in the original image again and extract the size from there, or just alter the preprocessor to also save the original size.
-    brats_size_preds = np.zeros((240,240,155),dtype=np.int16)
-    brats_size_preds[crop]=voxel_preds
-    return brats_size_preds
-
 
 #Creates closest crop possible by discarding all planes that are entirely black
 #Note returns boolean array, does NOT actually perform crop

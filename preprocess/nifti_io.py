@@ -49,9 +49,3 @@ def save_as_nifti(img,fp):
     img = nib.nifti1.Nifti1Image(img, affine_mat)
     nib.save(img, fp)
 
-def read_nifti(fp,data_type):
-    nib_obj = nib.load(fp)
-    return np.array(nib_obj.dataobj,dtype=data_type)
-
-
-
