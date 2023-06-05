@@ -311,20 +311,31 @@ def predict(graph, feature, model):
     pred = logits.argmax(1)
     pred = pred + 1
 
-    pred[pred == 3] = 0
+    # pred[pred == 3] = 0
     
     return pred
 
 
 def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, residuals, \
-                  val_dropout, layer_sizes, in_feats, n_classes, feat_drop, attn_drop, dataset_pickle_path):
+                  val_dropout, layer_sizes, in_feats, n_classes, feat_drop, attn_drop, dataset_pickle_path, \
+                  model_path = None):
     
-    os.makedirs(f'/ext/tesi_BraTS2021/saved_models/{timestamp}')
+    if not model_path == None:
+        os.makedirs(f'/ext/tesi_BraTS2021/testing_metrics/{timestamp}')
+        path = f'/ext/tesi_BraTS2021/testing_metrics/{timestamp}/testing_'
+    else:
+        os.makedirs(f'/ext/tesi_BraTS2021/saved_models/{timestamp}')
+        path = f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_'
+
     # Open the file in write mode ('w')
-    with open(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_{timestamp}_settings.txt', 'w') as f:
+    with open(f'{path}{timestamp}_settings.txt', 'w') as f:
         f.write('-- DATASET PICKLE --\n')
         f.write(f'dataset pickle = {dataset_pickle_path}\n')
         
+        f.write('-- MODEL PATH --\n')
+        if not model_path == None:
+            f.write(f'model path = {model_path} \n')
+
         f.write('\n-- TYPE MODEL --\n')
         f.write(f'model = {model}\n')
 
