@@ -4,3 +4,4 @@ dgl
 matplotlib
 medpy
 python-dotenv
+shap

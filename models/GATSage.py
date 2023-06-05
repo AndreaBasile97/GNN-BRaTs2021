@@ -28,8 +28,8 @@ class GraphSage(nn.Module):
         # output layer
         self.layers.append(SAGEConv(layer_sizes[-1], n_classes, aggregator_type, feat_drop=0, activation=None))
 
-    def forward(self,graph,features):
-        h = features
+    def forward(self,graph,feat, **kwargs):
+        h = feat
         for layer in self.layers:
             h = layer(graph, h)
         return h
@@ -63,3 +63,31 @@ class GAT(nn.Module):
         # output projection
         logits = self.layers[-1](g, h).mean(1)
         return logits
+    
+
+
+class UnetRefinementNet(nn.Module):
+    def __init__(self, in_feats, out_classes, layer_sizes):
+        super().__init__()
+
+        # Contracting Path
+        self.enc_conv1 = nn.Conv3d(in_feats, layer_sizes[0], kernel_size=3, padding=1)
+        self.enc_conv2 = nn.Conv3d(layer_sizes[0], layer_sizes[1], kernel_size=3, padding=1)
+
+        # Expanding Path
+        self.dec_conv1 = nn.Conv3d(layer_sizes[1], layer_sizes[0], kernel_size=3, padding=1)
+        self.dec_conv2 = nn.Conv3d(layer_sizes[0], out_classes, kernel_size=3, padding=1)
+
+        self.maxpool = nn.MaxPool3d(kernel_size=2, stride=2)
+        self.upsample = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=True)
+
+    def forward(self, comb_img_logits):
+        # Contracting Path
+        enc1 = F.relu(self.enc_conv1(comb_img_logits))
+        enc2 = F.relu(self.enc_conv2(self.maxpool(enc1)))
+
+        # Expanding Path
+        dec1 = F.relu(self.dec_conv1(self.upsample(enc2)))
+        dec2 = self.dec_conv2(dec1)
+
+        return dec2
