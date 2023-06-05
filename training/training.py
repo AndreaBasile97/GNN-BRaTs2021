@@ -37,7 +37,7 @@ os.environ["DGLBACKEND"] = "pytorch"
 
 load_dotenv()
 dataset_pickle_path = os.getenv('DATASET_PICKLE_PATH')
-metrics_path = os.getenv('METRICS_SAVE_PATH')
+metrics_path = os.getenv('METRICS_TRAINING_SAVE_PATH')
 
 ####### LOAD THE DATASET  AND SPLIT TRAIN - TEST - VAL ########
 with open(dataset_pickle_path, 'rb') as f:
@@ -202,9 +202,9 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
         # Save metrics to a CSV file
         df_metrics = pd.DataFrame(metrics)
         string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
-        df_metrics.to_csv(f'{metrics_path}{timestamp}/training_metrics_{string_timestamp}.csv', index=False)
+        df_metrics.to_csv(f'{metrics_path}/{string_timestamp}/training_metrics_{string_timestamp}.csv', index=False)
 
-    torch.save(model.state_dict(), f'{metrics_path}{timestamp}/model_epoch_{e}_{string_timestamp}.pth')
+    torch.save(model.state_dict(), f'{metrics_path}/{string_timestamp}/model_epoch_{e}_{string_timestamp}.pth')
 
 
 
@@ -218,13 +218,13 @@ print(f'CrossEntropyLoss weights: {avg_weights}')
 
 # Define parameters
 in_feats = 20
-layer_sizes = [512, 512, 512, 512, 512, 512]
+layer_sizes = [256, 256, 256, 256]
 n_classes = 4
 heads = [8, 8, 8, 8, 8, 8]
 residuals = [False, True, True, False, True, True]
 
 patience = 10 # number of epochs to wait for improvement before stopping
-lr = 0.00020
+lr = 0.0005
 weight_decay = 0.0001 
 gamma = 0.98
 
