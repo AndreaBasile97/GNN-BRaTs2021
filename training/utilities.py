@@ -328,10 +328,10 @@ def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_mode
     
     string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
     if not model_path == None:
-        os.makedirs(f'{metrics_testing_path}/{timestamp}')
+        os.makedirs(f'{metrics_testing_path}/{string_timestamp}')
         path = f'{metrics_testing_path}/{string_timestamp}/testing_'
     else:
-        os.makedirs(f'{metrics_training_path}/{timestamp}')
+        os.makedirs(f'{metrics_training_path}/{string_timestamp}')
         path = f'{metrics_training_path}/{string_timestamp}/training_'
     
     # Open the file in write mode ('w')
