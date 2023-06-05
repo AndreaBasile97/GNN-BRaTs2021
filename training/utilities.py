@@ -358,6 +358,20 @@ def predict(graph, feature, model):
     
     return pred
 
+
+def predict_probs(data_asarray, model, target_class):
+    graph, features, label, id = data_asarray
+    features = torch.tensor(features).float()
+    with torch.no_grad(): 
+        logits = model(graph, features)
+        # Apply softmax to logits to get probabilities
+        probabilities = torch.nn.functional.softmax(logits, dim=1)
+        # Extract the probability of the target_class
+        return probabilities[:, target_class].numpy()
+
+
+
+
 def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, \
                   residuals, val_dropout, layer_sizes, in_feats, n_classes):
     # Open the file in write mode ('w')

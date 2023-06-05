@@ -7,21 +7,30 @@ import networkx as nx
 import json
 import dgl
 
-with open('full_dataset_with_id_006.pickle', 'rb') as f:
+import warnings
+from numba.core.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning
+
+warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
+warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
+
+
+with open('pickle_dataset/full_dataset_with_id_006.pickle', 'rb') as f:
     dataset = pickle.load(f)
 
 
 grafo_esempio = dataset[1][0]
 features = dataset[1][1]
+labels = dataset[1][2]
 id = dataset[1][3]
 
+print(labels)
 print(id)
 
 from models.GATSage import GraphSage
 
 test_model = GraphSage(in_feats = 20, layer_sizes = [256, 256, 256, 256, 256, 256], n_classes = 4, aggregator_type='pool', dropout=0)
 
-test_model.load_state_dict(torch.load('model_epoch_25.pth'))
+test_model.load_state_dict(torch.load('model_epoch_54_2023-06-02-193237.pth'))
 
 # predicted_labels = predict(grafo_esempio, features, test_model)
 
@@ -34,9 +43,14 @@ test_model.load_state_dict(torch.load('model_epoch_25.pth'))
 # _3Dplotter(tumor)
 # _3Dplotter(labels)
 
+# SHAP
+# shap_exp = create_explainer(dataset[:10], test_model)
+# compute_explanation(shap_exp, dataset[23:16], test_model)
+
+# GNNExplainer
 
 
-# Explainer
+features_mask, edge_mask = explain_graph(test_model, grafo_esempio, features, labels)
 
-features_mask, edge_mask = explain_graph(test_model, grafo_esempio, features)
-print(max(edge_mask))
+print(features_mask, edge_mask)
+
