@@ -220,11 +220,11 @@ heads = [8, 8, 8, 8, 8, 8]
 residuals = [False, True, True, False, True, True]
 
 patience = 10 # number of epochs to wait for improvement before stopping
-lr = 0.0005
+lr = 0.00020
 weight_decay = 0.0001 
 gamma = 0.98
 
-val_dropout = 0.25
+val_dropout = 0.2
 val_feat_drop = 0.5
 val_attn_drop = 0.5
 
@@ -235,7 +235,7 @@ elif args.model == 'GAT':
     model = GAT(in_feats, layer_sizes, n_classes, heads, residuals, feat_drop = val_feat_drop, attn_drop = val_attn_drop)
 
 save_settings(timestamp, model, patience, lr, weight_decay, gamma, args.model, heads, residuals, \
-              val_dropout, layer_sizes, in_feats, n_classes, val_feat_drop, val_attn_drop, dataset_pickle_path)
+              val_dropout, layer_sizes, in_feats, n_classes, val_feat_drop, val_attn_drop, dataset_pickle_path, model_path = None)
 
 
 trained_model = train_batch(timestamp, train_batches, val_batches, model, avg_weights, patience, lr, weight_decay, gamma)
