@@ -1,0 +1,41 @@
+-- DATASET PICKLE --
+dataset pickle = pickle_dataset/full_dataset_with_id_01.pickle
+
+-- TYPE MODEL --
+model = GraphSage(
+  (layers): ModuleList(
+    (0): SAGEConv(
+      (feat_drop): Dropout(p=0.25, inplace=False)
+      (fc_pool): Linear(in_features=20, out_features=20, bias=True)
+      (fc_neigh): Linear(in_features=20, out_features=512, bias=False)
+      (fc_self): Linear(in_features=20, out_features=512, bias=True)
+    )
+    (1-5): 5 x SAGEConv(
+      (feat_drop): Dropout(p=0.25, inplace=False)
+      (fc_pool): Linear(in_features=512, out_features=512, bias=True)
+      (fc_neigh): Linear(in_features=512, out_features=512, bias=False)
+      (fc_self): Linear(in_features=512, out_features=512, bias=True)
+    )
+    (6): SAGEConv(
+      (feat_drop): Dropout(p=0, inplace=False)
+      (fc_pool): Linear(in_features=512, out_features=512, bias=True)
+      (fc_neigh): Linear(in_features=512, out_features=4, bias=False)
+      (fc_self): Linear(in_features=512, out_features=4, bias=True)
+    )
+  )
+)
+
+-- HYPERPARAMS --
+patience = 10
+lr = 0.0005
+weight_decay = 0.0001
+gamma = 0.98
+val_dropout = 0.25
+layer_sizes = [512, 512, 512, 512, 512, 512]
+
+-- PARAMETERS --
+in_feats = 20
+n_classes = 4
+
+-- DATE --
+timestamp = 2023-06-05 18:43:10.271584
