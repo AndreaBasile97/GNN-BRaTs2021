@@ -109,7 +109,7 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
             # Forward pass
             logits = model(bg, features)
 
-            save_splitted_logits(logits, ids)
+            # save_splitted_logits(logits, ids)
 
             # Compute prediction
             pred = logits.argmax(1)
@@ -188,6 +188,13 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
             'dice_score_val_ET': avg_val_dice_et
         })
 
+        print(f"EPOCH {e} | loss: {avg_loss:.3f} | dice-score train WT: {avg_train_dice_wt:.3f} | dice-score train CT: {avg_train_dice_ct:.3f} | dice-score train ET: {avg_train_dice_et:.3f} || val_loss:{avg_val_loss:.3f} | dice-score val WT: {avg_val_dice_wt:.3f} | dice-score val CT: {avg_val_dice_ct:.3f} | dice-score val ET: {avg_val_dice_et:.3f} ")
+
+        # Save metrics to a CSV file
+        df_metrics = pd.DataFrame(metrics)
+        string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
+        df_metrics.to_csv(f'{metrics_path}/{string_timestamp}/training_metrics_{string_timestamp}.csv', index=False)
+
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             wait = 0
@@ -196,18 +203,8 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
             if wait >= patience:
                 print("Early stopping...")
                 break
-
-        print(f"EPOCH {e} | loss: {avg_loss:.3f} | dice-score train WT: {avg_train_dice_wt:.3f} | dice-score train CT: {avg_train_dice_ct:.3f} | dice-score train ET: {avg_train_dice_et:.3f} || val_loss:{avg_val_loss:.3f} | dice-score val WT: {avg_val_dice_wt:.3f} | dice-score val CT: {avg_val_dice_ct:.3f} | dice-score val ET: {avg_val_dice_et:.3f} ")
-
-        # Save metrics to a CSV file
-        df_metrics = pd.DataFrame(metrics)
-        string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
-        df_metrics.to_csv(f'{metrics_path}/{string_timestamp}/training_metrics_{string_timestamp}.csv', index=False)
-
+  
     torch.save(model.state_dict(), f'{metrics_path}/{string_timestamp}/model_epoch_{e}_{string_timestamp}.pth')
-
-
-
 
 
 from models.GATSage import GraphSage, GAT
@@ -218,7 +215,7 @@ print(f'CrossEntropyLoss weights: {avg_weights}')
 
 # Define parameters
 in_feats = 20
-layer_sizes = [256, 256, 256, 256]
+layer_sizes = [512, 512, 512]
 n_classes = 4
 heads = [8, 8, 8, 8, 8, 8]
 residuals = [False, True, True, False, True, True]
@@ -229,8 +226,8 @@ weight_decay = 0.0001
 gamma = 0.98
 
 val_dropout = 0.2
-val_feat_drop = 0.5
-val_attn_drop = 0.5
+val_feat_drop = 0.2
+val_attn_drop = 0.2
 
 # Create model
 if args.model == 'GraphSage':

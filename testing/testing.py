@@ -77,7 +77,7 @@ def testing_batch(timestamp, dgl_test_graphs, model):
     print(f'Testing started at: {timestamp}')
 
     metrics = []
-    
+
     for batch in tqdm(dgl_test_graphs):
         bg = dgl.batch([data[0] for data in batch])  # batched graph
         features = torch.cat([torch.tensor(data[1]).float() for data in batch], dim=0)  # concatenate features
@@ -122,10 +122,10 @@ def testing_batch(timestamp, dgl_test_graphs, model):
 from models.GATSage import GraphSage, GAT
 
 in_feats = 20
-layer_sizes = [256, 256, 256, 256, 256, 256]
+layer_sizes = [512, 512, 512]
 n_classes = 4
-heads = [4, 4, 4, 4, 4, 4]
-residuals = [False, True, True, False, True, True]
+heads = [6, 6, 6, 6, 6, 6]
+residuals = [True, True, True, True, True, True]
 
 patience = 10 # number of epochs to wait for improvement before stopping
 lr = 0.0005
@@ -133,8 +133,8 @@ weight_decay = 0.0001
 gamma = 0.98
 
 val_dropout = 0.2
-val_feat_drop = 0.5
-val_attn_drop = 0.5
+val_feat_drop = 0
+val_attn_drop = 0
 
 
 # Create model
