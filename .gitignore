@@ -23,3 +23,68 @@ model_epoch_25.pth
 model_epoch_24_GAT.pth
 model_epoch_54_2023-06-02-193237.pth
 saved_models
+model_epoch_25_graphSage.pth
+00167_explanations/00167_edge_mask.pickle
+00167_explanations/00167_feat_mask.pickle
+00167_explanations/00167_feature_explanation.png
+00167_explanations/00167_percentile_explanation.png
+00321_explanations/00321_percentile_explanation.png
+00336_explanations/00336_edge_mask.pickle
+00336_explanations/00336_feat_mask.pickle
+00336_explanations/00336_feature_explanation.png
+00336_explanations/00336_percentile_explanation.png
+00359_explanations/00359_edge_mask.pickle
+00359_explanations/00359_feat_mask.pickle
+00359_explanations/00359_feature_explanation.png
+00359_explanations/00359_percentile_explanation.png
+00395_explanations/00395_edge_mask.pickle
+00395_explanations/00395_feat_mask.pickle
+00395_explanations/00395_feature_explanation.png
+00395_explanations/00395_percentile_explanation.png
+00807_explanations/00807_edge_mask.pickle
+00807_explanations/00807_feat_mask.pickle
+00807_explanations/00807_feature_explanation.png
+00807_explanations/00807_percentile_explanation.png
+01049_explanations/01049_edge_mask.pickle
+01049_explanations/01049_feat_mask.pickle
+01049_explanations/01049_feature_explanation.png
+01049_explanations/01049_percentile_explanation.png
+01067_explanations/01067_edge_mask.pickle
+01067_explanations/01067_feat_mask.pickle
+01067_explanations/01067_feature_explanation.png
+01067_explanations/01067_percentile_explanation.png
+01171_explanations/01171_edge_mask.pickle
+01171_explanations/01171_feat_mask.pickle
+01171_explanations/01171_feature_explanation.png
+01171_explanations/01171_percentile_explanation.png
+01284_explanations/01284_edge_mask.pickle
+01284_explanations/01284_feat_mask.pickle
+01284_explanations/01284_feature_explanation.png
+01284_explanations/01284_percentile_explanation.png
+01293_explanations/01293_edge_mask.pickle
+01293_explanations/01293_feat_mask.pickle
+01293_explanations/01293_feature_explanation.png
+01293_explanations/01293_percentile_explanation.png
+01356_explanations/01356_edge_mask.pickle
+01356_explanations/01356_feat_mask.pickle
+01356_explanations/01356_feature_explanation.png
+01356_explanations/01356_percentile_explanation.png
+01462_explanations/01462_edge_mask.pickle
+01462_explanations/01462_feat_mask.pickle
+01462_explanations/01462_feature_explanation.png
+01462_explanations/01462_percentile_explanation.png
+01466_explanations/01466_edge_mask.pickle
+01466_explanations/01466_feat_mask.pickle
+01466_explanations/01466_feature_explanation.png
+01466_explanations/01466_percentile_explanation.png
+testing_metrics/GAT 1 giugno/testing_20230605-211248_settings.txt
+testing_metrics/GAT 1 giugno/testing_metrics_20230605-211248.csv
+testing_metrics/Graph 2 giugno/model_epoch_25_graphSage.pth
+testing_metrics/Graph 2 giugno/testing_20230605-213146_settings.txt
+testing_metrics/Graph 2 giugno/testing_metrics_20230605-213146.csv
+testing_metrics/Graph 3 giugno - 18-15/model_epoch_60_20230603-181533.pth
+testing_metrics/Graph 3 giugno - 18-15/testing_2023-06-05 02_09_53.833234_settings.txt
+testing_metrics/Graph 3 giugno - 18-15/testing_metrics_20230605-020953.csv
+testing_metrics/Graph 5 giugno - 02-26/model_epoch_59_20230605-022601.pth
+testing_metrics/Graph 5 giugno - 02-26/testing_20230605-214302_settings.txt
+testing_metrics/Graph 5 giugno - 02-26/testing_metrics_20230605-214302.csv
