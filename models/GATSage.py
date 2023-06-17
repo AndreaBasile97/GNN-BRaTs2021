@@ -4,10 +4,10 @@ import torch.nn.functional as F
 
 from dgl.nn.pytorch import GATConv, GraphConv
 from dgl.nn.pytorch.conv import SAGEConv
-
+from dgl.nn.pytorch.conv import ChebConv
 '''
 Contains the actual neural network architectures.
-Supports GraphSAGE with either the pool,mean,gcn, or lstm aggregator as well as GAT.
+Supports GraphSAGE with either the sum,mean,gcn, or lstm aggregator as well as GAT.
 The input, output, and intermediate layer sizes can all be specified.
 Typically will call init_graph_net and pass along the desired model and hyperparameters.
 
@@ -63,3 +63,55 @@ class GATSage(nn.Module):
         # output projection
         logits = self.layers[-1](g, h).mean(1)
         return logits
+    
+from dgl.nn.pytorch.conv import GINConv
+import torch.nn.functional as F
+
+class GIN(nn.Module):
+    def __init__(self, in_feats, layer_sizes, n_classes, dropout):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        self.dropout = dropout
+
+        # input layer
+        self.layers.append(GINConv(apply_func=nn.Linear(in_feats, layer_sizes[0]), aggregator_type='sum'))
+        # hidden layers
+        for i in range(1, len(layer_sizes)):
+            self.layers.append(GINConv(apply_func=nn.Linear(layer_sizes[i-1], layer_sizes[i]), aggregator_type='sum'))
+        # output layer
+        self.layers.append(GINConv(apply_func=nn.Linear(layer_sizes[-1], n_classes), aggregator_type='sum'))
+
+    def forward(self, g, feat):
+        h = feat
+        for layer in self.layers[:-1]:
+            h = layer(g, h)
+            h = F.relu(h)
+            h = F.dropout(h, p=self.dropout, training=self.training)
+        h = self.layers[-1](g, h)
+        return h
+
+
+class ChebNet(nn.Module):
+    def __init__(self, in_feats, layer_sizes, n_classes, k, dropout):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        self.dropout = nn.Dropout(p=dropout)
+
+        # Input layer
+        self.layers.append(ChebConv(in_feats, layer_sizes[0], k))
+
+        # Hidden layers
+        for i in range(1, len(layer_sizes)):
+            self.layers.append(ChebConv(layer_sizes[i-1], layer_sizes[i], k))
+
+        # Output layer
+        self.layers.append(ChebConv(layer_sizes[-1], n_classes, k))
+
+    def forward(self, g, inputs):
+        h = inputs
+        for i, layer in enumerate(self.layers):
+            h = layer(g, h)
+            if i != len(self.layers) - 1: # No activation and dropout on the output layer
+                h = F.relu(h)
+                h = self.dropout(h)
+        return h
