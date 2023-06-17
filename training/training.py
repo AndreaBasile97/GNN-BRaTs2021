@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from training.utilities import compute_average_weights, save_settings, save_splitted_logits
+from training.utilities import compute_average_weights, save_settings
 import torch.optim as optim
 import os
 import warnings
@@ -16,7 +16,6 @@ import numpy as np
 from dotenv import load_dotenv
 import datetime
 import argparse
-
 
 # Create the parser 
 parser = argparse.ArgumentParser() 
@@ -104,12 +103,9 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
             bg = dgl.batch([data[0] for data in batch])  # batched graph
             features = torch.cat([torch.tensor(data[1]).float() for data in batch], dim=0)  # concatenate features
             labels = torch.cat([torch.tensor(data[2]).long() - 1 for data in batch], dim=0)  # Offset the labels and concatenate
-            ids = [data[3] for data in batch]
 
             # Forward pass
             logits = model(bg, features)
-
-            # save_splitted_logits(logits, ids)
 
             # Compute prediction
             pred = logits.argmax(1)
@@ -202,15 +198,16 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
         # Save metrics to a CSV file
         df_metrics = pd.DataFrame(metrics)
         string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
-        df_metrics.to_csv(f'{metrics_path}/{string_timestamp}/training_metrics_{string_timestamp}.csv', index=False)
+        df_metrics.to_csv(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_metrics_{string_timestamp}.csv', index=False)
+
+    torch.save(model.state_dict(), f'/ext/tesi_BraTS2021/saved_models/{timestamp}/model_epoch_{e}_{string_timestamp}.pth')
 
     torch.save(model.state_dict(), f'{metrics_path}/{string_timestamp}/model_epoch_{e}_{string_timestamp}.pth')
 
 
 
 
-
-from models.GATSage import GraphSage, GATSage, GIN, ChebNet 
+from models.GATSage import GraphSage, GAT
 
 avg_weights = compute_average_weights(val_data)
 
@@ -249,3 +246,5 @@ save_settings(timestamp, model, patience, lr, weight_decay, gamma, args.model, h
 trained_model = train_batch(timestamp, train_batches, val_batches, model, avg_weights, patience, lr, weight_decay, gamma)
 # trained_model = train(train_data, val_data, model, avg_weights)
 
+trained_model = train_batch(timestamp, train_batches, val_batches, model, avg_weights, patience, lr, weight_decay, gamma)
+# trained_model = train(train_data, val_data, model, avg_weights)
