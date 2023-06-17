@@ -207,7 +207,7 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
     torch.save(model.state_dict(), f'{metrics_path}/{string_timestamp}/model_epoch_{e}_{string_timestamp}.pth')
 
 
-from models.GATSage import GraphSage, GAT
+from models.GATSage import GraphSage, GAT, GIN, ChebNet
 
 avg_weights = compute_average_weights(val_data)
 
@@ -234,6 +234,10 @@ if args.model == 'GraphSage':
     model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = val_dropout)
 elif args.model == 'GAT':
     model = GAT(in_feats, layer_sizes, n_classes, heads, residuals, feat_drop = val_feat_drop, attn_drop = val_attn_drop)
+elif args.model == 'GIN':
+    model = GIN(in_feats, layer_sizes, n_classes, dropout = val_dropout)
+elif args.model == 'Cheb':
+    model = ChebNet(in_feats, layer_sizes, n_classes, k = 3, dropout = val_dropout)
 
 save_settings(timestamp, model, patience, lr, weight_decay, gamma, args.model, heads, residuals, \
               val_dropout, layer_sizes, in_feats, n_classes, val_feat_drop, val_attn_drop, dataset_pickle_path, model_path = None)
