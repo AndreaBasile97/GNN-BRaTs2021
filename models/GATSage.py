@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from dgl.nn.pytorch import GATConv, GraphConv
+from dgl.nn.pytorch import GATConv, ChebConv
 from dgl.nn.pytorch.conv import SAGEConv
 
 '''
@@ -63,31 +63,56 @@ class GAT(nn.Module):
         # output projection
         logits = self.layers[-1](g, h).mean(1)
         return logits
-    
 
 
-class UnetRefinementNet(nn.Module):
-    def __init__(self, in_feats, out_classes, layer_sizes):
+from dgl.nn.pytorch import GINConv
+import torch.nn.functional as F
+
+class GIN(nn.Module):
+    def __init__(self, in_feats, layer_sizes, n_classes, dropout):
         super().__init__()
+        self.layers = nn.ModuleList()
+        self.dropout = dropout
 
-        # Contracting Path
-        self.enc_conv1 = nn.Conv3d(in_feats, layer_sizes[0], kernel_size=3, padding=1)
-        self.enc_conv2 = nn.Conv3d(layer_sizes[0], layer_sizes[1], kernel_size=3, padding=1)
+        # input layer
+        self.layers.append(GINConv(apply_func=nn.Linear(in_feats, layer_sizes[0]), aggregator_type='sum'))
+        # hidden layers
+        for i in range(1, len(layer_sizes)):
+            self.layers.append(GINConv(apply_func=nn.Linear(layer_sizes[i-1], layer_sizes[i]), aggregator_type='sum'))
+        # output layer
+        self.layers.append(GINConv(apply_func=nn.Linear(layer_sizes[-1], n_classes), aggregator_type='sum'))
 
-        # Expanding Path
-        self.dec_conv1 = nn.Conv3d(layer_sizes[1], layer_sizes[0], kernel_size=3, padding=1)
-        self.dec_conv2 = nn.Conv3d(layer_sizes[0], out_classes, kernel_size=3, padding=1)
+    def forward(self, g, feat):
+        h = feat
+        for layer in self.layers[:-1]:
+            h = layer(g, h)
+            h = F.relu(h)
+            h = F.dropout(h, p=self.dropout, training=self.training)
+        h = self.layers[-1](g, h)
+        return h
 
-        self.maxpool = nn.MaxPool3d(kernel_size=2, stride=2)
-        self.upsample = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=True)
 
-    def forward(self, comb_img_logits):
-        # Contracting Path
-        enc1 = F.relu(self.enc_conv1(comb_img_logits))
-        enc2 = F.relu(self.enc_conv2(self.maxpool(enc1)))
+class ChebNet(nn.Module):
+    def __init__(self, in_feats, layer_sizes, n_classes, k, dropout):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        self.dropout = nn.Dropout(p=dropout)
 
-        # Expanding Path
-        dec1 = F.relu(self.dec_conv1(self.upsample(enc2)))
-        dec2 = self.dec_conv2(dec1)
+        # Input layer
+        self.layers.append(ChebConv(in_feats, layer_sizes[0], k))
 
-        return dec2
+        # Hidden layers
+        for i in range(1, len(layer_sizes)):
+            self.layers.append(ChebConv(layer_sizes[i-1], layer_sizes[i], k))
+
+        # Output layer
+        self.layers.append(ChebConv(layer_sizes[-1], n_classes, k))
+
+    def forward(self, g, inputs):
+        h = inputs
+        for i, layer in enumerate(self.layers):
+            h = layer(g, h)
+            if i != len(self.layers) - 1: # No activation and dropout on the output layer
+                h = F.relu(h)
+                h = self.dropout(h)
+        return h
