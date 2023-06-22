@@ -76,3 +76,14 @@ model_epoch_25_graphSage.pth
 01466_explanations/01466_feat_mask.pickle
 01466_explanations/01466_feature_explanation.png
 01466_explanations/01466_percentile_explanation.png
+saved_models/20230617-212641/model_epoch_36_20230617-212641.pth
+saved_models/20230617-212641/training_20230617-212641_settings.txt
+saved_models/20230617-212641/training_metrics_20230617-212641.csv
+saved_models/20230618-192248/model_epoch_47_20230618-192248.pth
+saved_models/20230618-192248/training_20230618-192248_settings.txt
+saved_models/20230618-192248/training_metrics_20230618-192248.csv
+saved_models/TrainedChebNet/mean_and_median.txt
+saved_models/TrainedChebNet/model_epoch_91.pth
+saved_models/TrainedChebNet/testing_metrics.csv
+saved_models/TrainedChebNet/training_settings.txt
+model_epoch_91.pth
