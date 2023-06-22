@@ -215,7 +215,7 @@ print(f'CrossEntropyLoss weights: {avg_weights}')
 
 # Define parameters
 in_feats = 20
-layer_sizes = [512, 512, 512]
+layer_sizes = [256, 256, 256]
 n_classes = 4
 heads = [8, 8, 8, 8, 8, 8]
 residuals = [False, True, True, False, True, True]
