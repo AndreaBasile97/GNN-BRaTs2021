@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from training.utilities import compute_average_weights, save_settings
+from training.utilities import compute_average_weights, save_settings, save_splitted_logits
 import torch.optim as optim
 import os
 import warnings
@@ -16,6 +16,7 @@ import numpy as np
 from dotenv import load_dotenv
 import datetime
 import argparse
+
 
 # Create the parser 
 parser = argparse.ArgumentParser() 
@@ -36,7 +37,7 @@ os.environ["DGLBACKEND"] = "pytorch"
 
 load_dotenv()
 dataset_pickle_path = os.getenv('DATASET_PICKLE_PATH')
-
+metrics_path = os.getenv('METRICS_TRAINING_SAVE_PATH')
 
 ####### LOAD THE DATASET  AND SPLIT TRAIN - TEST - VAL ########
 with open(dataset_pickle_path, 'rb') as f:
@@ -103,9 +104,12 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
             bg = dgl.batch([data[0] for data in batch])  # batched graph
             features = torch.cat([torch.tensor(data[1]).float() for data in batch], dim=0)  # concatenate features
             labels = torch.cat([torch.tensor(data[2]).long() - 1 for data in batch], dim=0)  # Offset the labels and concatenate
+            ids = [data[3] for data in batch]
 
             # Forward pass
             logits = model(bg, features)
+
+            # save_splitted_logits(logits, ids)
 
             # Compute prediction
             pred = logits.argmax(1)
@@ -184,6 +188,13 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
             'dice_score_val_ET': avg_val_dice_et
         })
 
+        print(f"EPOCH {e} | loss: {avg_loss:.3f} | dice-score train WT: {avg_train_dice_wt:.3f} | dice-score train CT: {avg_train_dice_ct:.3f} | dice-score train ET: {avg_train_dice_et:.3f} || val_loss:{avg_val_loss:.3f} | dice-score val WT: {avg_val_dice_wt:.3f} | dice-score val CT: {avg_val_dice_ct:.3f} | dice-score val ET: {avg_val_dice_et:.3f} ")
+
+        # Save metrics to a CSV file
+        df_metrics = pd.DataFrame(metrics)
+        string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
+        df_metrics.to_csv(f'{metrics_path}/{string_timestamp}/training_metrics_{string_timestamp}.csv', index=False)
+
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             wait = 0
@@ -192,21 +203,11 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
             if wait >= patience:
                 print("Early stopping...")
                 break
-
-        print(f"EPOCH {e} | loss: {avg_loss:.3f} | dice-score train WT: {avg_train_dice_wt:.3f} | dice-score train CT: {avg_train_dice_ct:.3f} | dice-score train ET: {avg_train_dice_et:.3f} || val_loss:{avg_val_loss:.3f} | dice-score val WT: {avg_val_dice_wt:.3f} | dice-score val CT: {avg_val_dice_ct:.3f} | dice-score val ET: {avg_val_dice_et:.3f} ")
-
-        # Save metrics to a CSV file
-        df_metrics = pd.DataFrame(metrics)
-        string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
-        df_metrics.to_csv(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_metrics_{string_timestamp}.csv', index=False)
-
-    torch.save(model.state_dict(), f'/ext/tesi_BraTS2021/saved_models/{timestamp}/model_epoch_{e}_{string_timestamp}.pth')
+  
+    torch.save(model.state_dict(), f'{metrics_path}/{string_timestamp}/model_epoch_{e}_{string_timestamp}.pth')
 
 
-
-
-
-from models.GATSage import GraphSage, GAT
+from models.GATSage import GraphSage, GAT, GIN, ChebNet
 
 avg_weights = compute_average_weights(val_data)
 
@@ -214,7 +215,7 @@ print(f'CrossEntropyLoss weights: {avg_weights}')
 
 # Define parameters
 in_feats = 20
-layer_sizes = [512, 512, 512, 512, 512, 512]
+layer_sizes = [256, 256, 256]
 n_classes = 4
 heads = [8, 8, 8, 8, 8, 8]
 residuals = [False, True, True, False, True, True]
@@ -224,18 +225,22 @@ lr = 0.0005
 weight_decay = 0.0001 
 gamma = 0.98
 
-val_dropout = 0.25
-val_feat_drop = 0.5
-val_attn_drop = 0.5
+val_dropout = 0.2
+val_feat_drop = 0.2
+val_attn_drop = 0.2
 
 # Create model
 if args.model == 'GraphSage':
     model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = val_dropout)
 elif args.model == 'GAT':
     model = GAT(in_feats, layer_sizes, n_classes, heads, residuals, feat_drop = val_feat_drop, attn_drop = val_attn_drop)
+elif args.model == 'GIN':
+    model = GIN(in_feats, layer_sizes, n_classes, dropout = val_dropout)
+elif args.model == 'Cheb':
+    model = ChebNet(in_feats, layer_sizes, n_classes, k = 3, dropout = val_dropout)
 
 save_settings(timestamp, model, patience, lr, weight_decay, gamma, args.model, heads, residuals, \
-              val_dropout, layer_sizes, in_feats, n_classes, val_feat_drop, val_attn_drop, dataset_pickle_path)
+              val_dropout, layer_sizes, in_feats, n_classes, val_feat_drop, val_attn_drop, dataset_pickle_path, model_path = None)
 
 
 trained_model = train_batch(timestamp, train_batches, val_batches, model, avg_weights, patience, lr, weight_decay, gamma)

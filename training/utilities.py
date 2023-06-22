@@ -13,6 +13,12 @@ import json
 import os
 from collections import Counter
 from tqdm import tqdm
+from dotenv import load_dotenv
+load_dotenv()
+dataset_path = os.getenv('DATASET_PATH')
+metrics_training_path = os.getenv('METRICS_TRAINING_SAVE_PATH')
+metrics_testing_path = os.getenv('METRICS_TESTING_SAVE_PATH')
+
 
 def load_networkx_graph(fp): 
     with open(fp,'r') as f: 
@@ -311,20 +317,32 @@ def predict(graph, feature, model):
     pred = logits.argmax(1)
     pred = pred + 1
 
-    pred[pred == 3] = 0
+    # pred[pred == 3] = 0
     
     return pred
 
 
 def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_model, heads, residuals, \
-                  val_dropout, layer_sizes, in_feats, n_classes, feat_drop, attn_drop, dataset_pickle_path):
+                  val_dropout, layer_sizes, in_feats, n_classes, feat_drop, attn_drop, dataset_pickle_path, \
+                  model_path = None):
     
-    os.makedirs(f'/ext/tesi_BraTS2021/saved_models/{timestamp}')
+    string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
+    if not model_path == None:
+        os.makedirs(f'{metrics_testing_path}/{string_timestamp}')
+        path = f'{metrics_testing_path}/{string_timestamp}/testing_'
+    else:
+        os.makedirs(f'{metrics_training_path}/{string_timestamp}')
+        path = f'{metrics_training_path}/{string_timestamp}/training_'
+    
     # Open the file in write mode ('w')
-    with open(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_{timestamp}_settings.txt', 'w') as f:
+    with open(f'{path}{string_timestamp}_settings.txt', 'w') as f:
         f.write('-- DATASET PICKLE --\n')
         f.write(f'dataset pickle = {dataset_pickle_path}\n')
         
+        f.write('-- MODEL PATH --\n')
+        if not model_path == None:
+            f.write(f'model path = {model_path} \n')
+
         f.write('\n-- TYPE MODEL --\n')
         f.write(f'model = {model}\n')
 
@@ -349,3 +367,50 @@ def save_settings(timestamp, model, patience, lr, weight_decay, gamma, args_mode
         
         f.write('\n-- DATE --\n')
         f.write(f'timestamp = {timestamp}\n')
+
+
+# Utilities for Unet refinement
+
+DEFAULT_BACKGROUND_NODE_LOGITS = [[1.0,-1.0,-1.0,-1.0]]
+
+def get_supervoxel_partitioning(mri_id):
+    fp=f'{dataset_path}/BraTS2021_{mri_id}/BraTS2021_{mri_id}_supervoxels.nii.gz'
+    return read_nifti(fp,np.int16)
+
+def save_voxel_logits(mri_id,node_logits):
+    global output_dir
+    node_logits=node_logits.detach().cpu().numpy()
+    supervoxel_partitioning = get_supervoxel_partitioning(mri_id)
+    #add placeholder logits for healthy tissue
+    node_logits = np.concatenate([node_logits,DEFAULT_BACKGROUND_NODE_LOGITS])
+    voxel_logits = node_logits[supervoxel_partitioning]
+    save_as_nifti(voxel_logits,f'{dataset_path}/BraTS2021_{mri_id}/BraTS2021_{mri_id}_logits.nii.gz')
+
+def save_as_nifti(img,fp):
+    affine_mat = np.array([
+        [ -1.0,  -0.0,  -0.0,  -0.0],
+        [ -0.0,  -1.0,  -0.0, 239.0],
+        [  0.0,   0.0,   1.0,   0.0],
+        [  0.0,   0.0,   0.0,   1.0],
+        ])
+    img = nib.nifti1.Nifti1Image(img, affine_mat)
+    nib.save(img, fp)
+
+def read_nifti(fp,data_type):
+    nib_obj = nib.load(fp)
+    return np.array(nib_obj.dataobj,dtype=data_type)
+
+def save_splitted_logits(batched_logits, ids):
+    start_index = 0
+    for id in ids:
+        G, features, labels, id = get_graph(f'{dataset_path}/BraTS2021_{id}/BraTS2021_{id}_nxgraph.json', id)
+        num_nodes = len(G.nodes())
+
+        # Extract logits for the current graph
+        logits = batched_logits[start_index : start_index + num_nodes]
+
+        # Save the logits
+        save_voxel_logits(id, logits)
+
+        # Update the starting index for the next graph
+        start_index += num_nodes

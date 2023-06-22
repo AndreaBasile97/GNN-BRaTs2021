@@ -16,6 +16,7 @@ features = dataset[0][1]
 labels = dataset[0][2]
 id = dataset[0][3]
 
+print(labels)
 print(id)
 
 from models.GATSage import GraphSage
