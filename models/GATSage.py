@@ -108,10 +108,10 @@ class ChebNet(nn.Module):
         # Output layer
         self.layers.append(ChebConv(layer_sizes[-1], n_classes, k))
 
-    def forward(self, g, inputs):
-        h = inputs
+    def forward(self, graph, feat, eweight=None):
+        h = feat
         for i, layer in enumerate(self.layers):
-            h = layer(g, h)
+            h = layer(graph, h)
             if i != len(self.layers) - 1: # No activation and dropout on the output layer
                 h = F.relu(h)
                 h = self.dropout(h)

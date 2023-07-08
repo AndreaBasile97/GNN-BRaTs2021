@@ -6,32 +6,31 @@ import pickle
 import os
 import networkx as nx
 
-def explain_multiple_graphs(model, dataset, num_graphs=10, nodes_per_class=2, random_seed=42):
-    np.random.seed(random_seed)
+def explain_multiple_graphs(model, dataset, num_graphs=10, nodes_per_class=2):
     random_indices = np.random.choice(len(dataset), num_graphs, replace=False)
-
     class_node_masks_all_graphs = []
 
     for idx in random_indices:
-        graph, features, labels, _id = dataset[idx]
+        if not str(idx) in ['00170','00105', '00137', '00149', '00171', '00253', '00286', '00309', '00329', '00364', '00366', '00382', '00386', '00493', '00523', '00554', '00583', '00630', '00631', '00651', '00728', '00733', '00803', '00806', '01037', '01066', '01078', '01082', '01201', '01245', '01300', '01340', '01386', '01430', '01463', '01480', '01549', '01625']:
+            graph, features, labels, _id = dataset[idx]
 
-        # Create directory if it doesn't exist
-        dir_path = f"{_id}_explanations"
-        try:
-            os.makedirs(dir_path, exist_ok=True)
-        except Exception as e:
-            print(f"Failed to create directory: {dir_path}")
-            print(f"Reason: {e}")
+            # Create directory if it doesn't exist
+            dir_path = f"{_id}_explanations"
+            try:
+                os.makedirs(dir_path, exist_ok=True)
+            except Exception as e:
+                print(f"Failed to create directory: {dir_path}")
+                print(f"Reason: {e}")
 
-        class_node_masks, class_edge_masks = explain_nodes_by_class(model, graph, features, labels, _id, nodes_per_class)
-        class_node_masks_all_graphs.append(class_node_masks)
+            class_node_masks, class_edge_masks = explain_nodes_by_class(model, graph, features, labels, _id, nodes_per_class)
+            class_node_masks_all_graphs.append(class_node_masks)
 
-        # Save dictionaries to pickle
-        with open(os.path.join(dir_path, f'{_id}_feat_mask.pickle'), 'wb') as handle:
-            pickle.dump(class_node_masks, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            # Save dictionaries to pickle
+            with open(os.path.join(dir_path, f'{_id}_feat_mask.pickle'), 'wb') as handle:
+                pickle.dump(class_node_masks, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(os.path.join(dir_path, f'{_id}_edge_mask.pickle'), 'wb') as handle:
-            pickle.dump(class_edge_masks, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(os.path.join(dir_path, f'{_id}_edge_mask.pickle'), 'wb') as handle:
+                pickle.dump(class_edge_masks, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
     return class_node_masks_all_graphs
 
@@ -137,6 +136,7 @@ def plot_percentile_importance_score(percentile_importance_score_dict, _id):
         ax.set_xticks([p + bar_width * (num_percentiles - 1) / 2 for p in positions])
         ax.set_xticklabels(modalities)
         ax.legend()
+        ax.set_ylim([0, 0.7])
 
     plt.savefig(f"{_id}_explanations/{_id}_percentile_explanation.png")
 
