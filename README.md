@@ -18,3 +18,14 @@ These graphs will be the input for different GNN such as:
 All these GNN are evaluated using Dice-Score and HD95 score (Node Wisely and Voxel Wisely) also taking into account the training time and computational resources available.
 
 The output will be a 3D MRI of the patient brain but with the highlighted tumor zones.
+
+
+# How to use:
+
+1. Intall requirements using:
+
+    pip install -r requirements.txt
+
+2. Preprocessing: be sure to have the BRaTs2021 dataset in the root and use it with the 'preprocess_dataset.py' script.
+3. Training: train the GNN using 'training.py' and remember to adjust the paths.
+4. Testing: test the GNN using the saved model and the test dataset.

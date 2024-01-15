@@ -6,7 +6,6 @@ import nibabel as nib
 import pickle
 import random
 from sklearn.model_selection import train_test_split
-from training.utilities import get_coordinates, get_supervoxel_values, assign_labels_to_graph
 import matplotlib.pyplot as plt
 
 class DglGenerator:
@@ -16,14 +15,6 @@ class DglGenerator:
         self.labels_path = labels_path
         self.dgl_path = dgl_path
         self.tensor_path = tensor_path
-
-
-    def tensor_labels(self, segmented_image, labels_generated, empty_RAG, id_patient, save=False):
-        R = assign_labels_to_graph(labels_generated, segmented_image, empty_RAG)
-        tl = torch.tensor(list(nx.get_node_attributes(R, 'label').values()))
-        if save:
-            torch.save(tl, f'{self.tensor_path}/tensor_label_{id_patient}')
-        return tl
 
 
     def dataset_splitting(self):

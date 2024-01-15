@@ -35,8 +35,9 @@ os.environ["DGLBACKEND"] = "pytorch"
 
 
 load_dotenv()
-dataset_pickle_path = os.getenv('DATASET_PICKLE_PATH')
-metrics_path = os.getenv('METRICS_TRAINING_SAVE_PATH')
+dataset_pickle_path = ''
+model_metrics_path = f'metrics.csv'
+model_backup_path = f'model.pth'
 
 ####### LOAD THE DATASET  AND SPLIT TRAIN - TEST - VAL ########
 with open(dataset_pickle_path, 'rb') as f:
@@ -198,16 +199,13 @@ def train_batch(timestamp, dgl_train_graphs, dgl_validation_graphs, model, loss_
         # Save metrics to a CSV file
         df_metrics = pd.DataFrame(metrics)
         string_timestamp = timestamp.strftime("%Y%m%d-%H%M%S")
-        df_metrics.to_csv(f'/ext/tesi_BraTS2021/saved_models/{timestamp}/training_metrics_{string_timestamp}.csv', index=False)
+        df_metrics.to_csv(model_metrics_path, index=False)
 
-    torch.save(model.state_dict(), f'/ext/tesi_BraTS2021/saved_models/{timestamp}/model_epoch_{e}_{string_timestamp}.pth')
-
-    torch.save(model.state_dict(), f'{metrics_path}/{string_timestamp}/model_epoch_{e}_{string_timestamp}.pth')
+    torch.save(model.state_dict(), model_backup_path)
 
 
 
-
-from models.GATSage import GraphSage, GAT
+from models.ChebNet import ChebNet
 
 avg_weights = compute_average_weights(val_data)
 
@@ -230,13 +228,7 @@ val_feat_drop = 0.2
 val_attn_drop = 0.2
 
 # Create model
-if args.model == 'GraphSage':
-    model = GraphSage(in_feats, layer_sizes, n_classes, aggregator_type = 'pool', dropout = val_dropout)
-elif args.model == 'GAT':
-    model = GATSage(in_feats, layer_sizes, n_classes, heads, residuals, feat_drop = val_feat_drop, attn_drop = val_attn_drop)
-elif args.model == 'GIN':
-    model = GIN(in_feats, layer_sizes, n_classes, dropout = val_dropout)
-elif args.model == 'Cheb':
+if args.model == 'Cheb':
     model = ChebNet(in_feats, layer_sizes, n_classes, k = 3, dropout = val_dropout)
 
 save_settings(timestamp, model, patience, lr, weight_decay, gamma, args.model, heads, residuals, \

@@ -4,3 +4,7 @@ dgl
 matplotlib
 medpy
 python-dotenv
+scikit-learn
+pandas
+scikit-image
+plotly
