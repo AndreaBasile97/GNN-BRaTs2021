@@ -1,31 +1,37 @@
-# GNN-BRaTs2021
+# GNN-BRaTs2021 🧠🔬
 
-This project refers to my thesis of Master degree in Computer Science.
+Welcome to the GNN-BRaTs2021 project, the focus of my Master's thesis in Computer Science. This project aims to leverage Graph Neural Networks (GNNs) for brain tumor segmentation using the BRaTS-2021 dataset. The comprehensive approach involves preprocessing the data, generating graphs for each patient's brain based on four MRI modalities (T1, T1-ce, T2, and Flair), and mapping the classified graphs to 3D MRI scans for tumor segmentation into Necrotic, Edema, and Enhanced Tumor regions.
 
-The goal is to:
+## Project Goals:
 
-1. preprocess the BraTS-2021 dataset
-2. produce graphs for each patient brain including informations from the four modalities of 3D MRI (T1, T1-ce, T2 and Flair). 
-3. Map the classified graph to the 3D Mri scan in order to produce a segmented tumor divided in his main three regions (Necrotic, Edema and Enh. Tumor)
+1. **Preprocessing:** Utilize the 'preprocess_dataset.py' script to prepare the BRaTS-2021 dataset for further analysis.
 
+2. **Graph Generation:** Produce informative graphs for each patient's brain by integrating data from the four modalities of 3D MRI.
 
-These graphs will be the input for different GNN such as:
+3. **Tumor Segmentation:** Map the classified graph to the 3D MRI scan, resulting in a segmented tumor with distinct regions (Necrotic, Edema, and Enhanced Tumor).
 
-- Graph Attention Network
-- Graph Convolutional Network
-- ChebNet
+4. **GNN Implementation:** Implement various Graph Neural Networks, including:
+   - Graph Attention Network
+   - Graph Convolutional Network
+   - ChebNet
 
-All these GNN are evaluated using Dice-Score and HD95 score (Node Wisely and Voxel Wisely) also taking into account the training time and computational resources available.
+5. **Evaluation Metrics:** Assess the performance of GNNs using Dice-Score and HD95 scores, considering both Node-wise and Voxel-wise metrics. Take into account training time and available computational resources.
 
-The output will be a 3D MRI of the patient brain but with the highlighted tumor zones.
+## How to Use:
 
+1. **Installation:** Install the required dependencies using:
+   ```
+   pip install -r requirements.txt
+   ```
 
-# How to use:
+2. **Preprocessing:** Ensure the BRaTS2021 dataset is in the root directory and execute the 'preprocess_dataset.py' script.
 
-1. Intall requirements using:
+3. **Training:** Train the GNN by using the 'training.py' script, and remember to adjust the paths accordingly.
 
-    pip install -r requirements.txt
+4. **Testing:** Evaluate the GNN using the saved model and the test dataset.
 
-2. Preprocessing: be sure to have the BRaTs2021 dataset in the root and use it with the 'preprocess_dataset.py' script.
-3. Training: train the GNN using 'training.py' and remember to adjust the paths.
-4. Testing: test the GNN using the saved model and the test dataset.
+## Results:
+
+The output of the project will be a 3D MRI of the patient's brain with highlighted tumor zones, providing valuable insights into tumor segmentation.
+
+Feel free to explore and contribute to this exciting project! 🚀🧑‍💻
